@@ -73,7 +73,7 @@ fastlane/test_output
 *.aab.zip
 
 ### Gradle ###
-.gradle
+#.gradle
 build/
 
 # Ignore Gradle GUI config
@@ -126,9 +126,10 @@ gradle-app.setting
 .DS_Store
 
 # Gradle files
-.gradle/
-/gradle/
+#.gradle/
+#/gradle/
 !/gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
 
 # Caching
 .cache/
