@@ -126,8 +126,8 @@ gradle-app.setting
 .DS_Store
 
 # Gradle files
-.gradle/
-/gradle/
+#.gradle/
+#/gradle/
 !/gradle/wrapper/gradle-wrapper.jar
 
 # Caching
