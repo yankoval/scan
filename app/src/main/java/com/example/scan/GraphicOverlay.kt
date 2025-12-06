@@ -32,7 +32,7 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
             val scaleY = overlay.height.toFloat() / overlay.imageWidth.toFloat()
             val scale = scaleX.coerceAtLeast(scaleY)
 
-            valoffsetX = (overlay.width.toFloat() - ceil(overlay.imageHeight.toFloat() * scale)) / 2.0f
+            val offsetX = (overlay.width.toFloat() - ceil(overlay.imageHeight.toFloat() * scale)) / 2.0f
             val offsetY = (overlay.height.toFloat() - ceil(overlay.imageWidth.toFloat() * scale)) / 2.0f
 
             val mappedBoundingBox = RectF().apply {
