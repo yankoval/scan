@@ -76,7 +76,7 @@ class BarcodeScannerProcessor(
         return barcode.rawValue?.length ?: 0 > 5
     }
 
-    private inner class BarcodeGraphic(
+    private class BarcodeGraphic(
         overlay: GraphicOverlay,
         private val barcode: Barcode,
         private val isValid: Boolean

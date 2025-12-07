@@ -12,11 +12,11 @@ import kotlin.math.min
 class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private val lock = Any()
     private val graphics: MutableList<Graphic> = ArrayList()
-    private var imageWidth: Int = 0
-    private var imageHeight: Int = 0
-    private var cameraSelector: Int = CameraSelector.LENS_FACING_BACK
+    internal var imageWidth: Int = 0
+    internal var imageHeight: Int = 0
+    internal var cameraSelector: Int = CameraSelector.LENS_FACING_BACK
 
-    abstract inner class Graphic(private val overlay: GraphicOverlay) {
+    abstract class Graphic(private val overlay: GraphicOverlay) {
         abstract fun draw(canvas: Canvas)
 
         protected fun calculateRect(boundingBox: Rect): RectF {
