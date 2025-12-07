@@ -73,8 +73,8 @@ fastlane/test_output
 *.aab.zip
 
 ### Gradle ###
-#.gradle
-#build/
+.gradle
+build/
 
 # Ignore Gradle GUI config
 gradle-app.setting

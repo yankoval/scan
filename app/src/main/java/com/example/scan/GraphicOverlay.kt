@@ -16,7 +16,7 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
     private var imageHeight: Int = 0
     private var cameraSelector: Int = CameraSelector.LENS_FACING_BACK
 
-    abstract class Graphic(private val overlay: GraphicOverlay) {
+    abstract inner class Graphic(private val overlay: GraphicOverlay) {
         abstract fun draw(canvas: Canvas)
 
         protected fun calculateRect(boundingBox: Rect): RectF {
