@@ -72,13 +72,9 @@ class MainActivity : AppCompatActivity() {
                 barcodeScannerProcessor =
                     BarcodeScannerProcessor(viewBinding.graphicOverlay, this)
 
-                // Get camera sensor info and set it to overlay
-                val cameraInfo = camera.cameraInfo
-                cameraInfo.sensorRotationDegrees.let { rotation ->
-                    val width = imageAnalyzer.resolutionInfo!!.resolution.width
-                    val height = imageAnalyzer.resolutionInfo!!.resolution.height
-                    viewBinding.graphicOverlay.setCameraInfo(width, height, cameraSelector.lensFacing!!)
-                }
+                val width = imageAnalyzer.resolutionInfo!!.resolution.width
+                val height = imageAnalyzer.resolutionInfo!!.resolution.height
+                viewBinding.graphicOverlay.setCameraInfo(width, height, cameraSelector.lensFacing!!)
 
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
