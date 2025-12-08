@@ -1,6 +1,7 @@
 package com.example.scan
 
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.RectF
 import androidx.test.core.app.ApplicationProvider
@@ -8,23 +9,29 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito.mock
-import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import kotlin.math.min
 
 @RunWith(RobolectricTestRunner::class)
 class GraphicOverlayTest {
 
     private lateinit var graphicOverlay: GraphicOverlay
-    private lateinit var testGraphic: GraphicOverlay.Graphic
 
     @Before
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         graphicOverlay = GraphicOverlay(context, null)
+    }
 
-        // Mock the Graphic class to isolate calculateRect for testing
-        testGraphic = mock(GraphicOverlay.Graphic::class.java, mock.CALLS_REAL_METHODS)
+    // A simple test implementation of the abstract Graphic class to access calculateRect
+    private class TestGraphic(overlay: GraphicOverlay) : GraphicOverlay.Graphic(overlay) {
+        override fun draw(canvas: Canvas) {
+            // Not needed for this test
+        }
+
+        fun testCalculateRect(boundingBox: Rect): RectF {
+            return calculateRect(boundingBox)
+        }
     }
 
     @Test
@@ -45,7 +52,7 @@ class GraphicOverlayTest {
         // 2. Calculate the expected output manually
         val scaleX = viewWidth.toFloat() / imageHeight.toFloat()   // 1080 / 720 = 1.5
         val scaleY = viewHeight.toFloat() / imageWidth.toFloat()  // 1920 / 1280 = 1.5
-        val scale = minOf(scaleX, scaleY) // 1.5
+        val scale = min(scaleX, scaleY) // 1.5
 
         val offsetX = (viewWidth.toFloat() - imageHeight.toFloat() * scale) / 2.0f // (1080 - 720 * 1.5) / 2 = 0
         val offsetY = (viewHeight.toFloat() - imageWidth.toFloat() * scale) / 2.0f // (1920 - 1280 * 1.5) / 2 = 0
@@ -58,17 +65,13 @@ class GraphicOverlayTest {
         val expectedRect = RectF(expectedLeft, expectedTop, expectedRight, expectedBottom)
 
         // 3. Call the method under test
-        val actualRect = testGraphic.calculateRectForTest(boundingBox)
+        val testGraphic = TestGraphic(graphicOverlay)
+        val actualRect = testGraphic.testCalculateRect(boundingBox)
 
         // 4. Assert that the actual output matches the expected output
         assertEquals("Left coordinate should be transformed correctly", expectedRect.left, actualRect.left, 0.1f)
         assertEquals("Top coordinate should be transformed correctly", expectedRect.top, actualRect.top, 0.1f)
         assertEquals("Right coordinate should be transformed correctly", expectedRect.right, actualRect.right, 0.1f)
         assertEquals("Bottom coordinate should be transformed correctly", expectedRect.bottom, actualRect.bottom, 0.1f)
-    }
-
-    // Helper extension to access the protected method for testing
-    private fun GraphicOverlay.Graphic.calculateRectForTest(boundingBox: Rect): RectF {
-        return this.calculateRect(boundingBox)
     }
 }
