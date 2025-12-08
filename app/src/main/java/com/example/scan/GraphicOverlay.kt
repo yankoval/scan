@@ -36,10 +36,8 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
             mappedBoundingBox.left = boundingBox.top * scale + offsetX
             mappedBoundingBox.right = boundingBox.bottom * scale + offsetX
 
-            // The Y coordinates need to be inverted because the camera's coordinate system
-            // starts from the top-left, while the view's starts from the top-left.
-            mappedBoundingBox.top = overlay.height - (boundingBox.right * scale + offsetY)
-            mappedBoundingBox.bottom = overlay.height - (boundingBox.left * scale + offsetY)
+            mappedBoundingBox.top = boundingBox.left * scale + offsetY
+            mappedBoundingBox.bottom = boundingBox.right * scale + offsetY
 
             // If using the front camera, the image is mirrored horizontally.
             if (overlay.cameraSelector == CameraSelector.LENS_FACING_FRONT) {

@@ -19,7 +19,7 @@ gen/
 out/
 
 # Gradle files
-#.gradle/
+.gradle/
 build/
 
 # Local configuration file (sdk path, etc)
@@ -73,7 +73,7 @@ fastlane/test_output
 *.aab.zip
 
 ### Gradle ###
-#.gradle
+.gradle
 build/
 
 # Ignore Gradle GUI config
@@ -127,7 +127,7 @@ gradle-app.setting
 
 # Gradle files
 .gradle/
-#/gradle/
+/gradle/
 !/gradle/wrapper/gradle-wrapper.jar
 
 # Caching
