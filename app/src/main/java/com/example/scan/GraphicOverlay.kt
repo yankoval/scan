@@ -33,11 +33,13 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
             val mappedBoundingBox = RectF()
 
             // Map the coordinates by rotating 90 degrees and then scaling.
-            mappedBoundingBox.left = boundingBox.top * scale + offsetX
-            mappedBoundingBox.right = boundingBox.bottom * scale + offsetX
-
+            // The X coordinate in the image corresponds to the Y coordinate in the view.
             mappedBoundingBox.top = boundingBox.left * scale + offsetY
             mappedBoundingBox.bottom = boundingBox.right * scale + offsetY
+
+            // The Y coordinate in the image corresponds to the X coordinate in the view, with inversion.
+            mappedBoundingBox.left = overlay.width - (boundingBox.bottom * scale + offsetX)
+            mappedBoundingBox.right = overlay.width - (boundingBox.top * scale + offsetX)
 
             // If using the front camera, the image is mirrored horizontally.
             if (overlay.cameraSelector == CameraSelector.LENS_FACING_FRONT) {
