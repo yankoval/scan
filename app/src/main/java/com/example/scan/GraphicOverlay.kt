@@ -20,26 +20,19 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
         abstract fun draw(canvas: Canvas)
 
         protected fun calculateRect(boundingBox: Rect): RectF {
-            // The camera image is in landscape mode, but the view is in portrait.
-            // Therefore, we must swap the image dimensions to calculate the scale factor.
             val scaleX = overlay.width.toFloat() / overlay.imageHeight.toFloat()
             val scaleY = overlay.height.toFloat() / overlay.imageWidth.toFloat()
             val scale = min(scaleX, scaleY)
 
-            // Calculate offsets to center the scaled image within the view.
             val offsetX = (overlay.width.toFloat() - overlay.imageHeight.toFloat() * scale) / 2.0f
             val offsetY = (overlay.height.toFloat() - overlay.imageWidth.toFloat() * scale) / 2.0f
 
             val mappedBoundingBox = RectF()
 
-            // Map the coordinates by rotating 90 degrees and then scaling.
-            // The X coordinate in the image corresponds to the Y coordinate in the view.
+            mappedBoundingBox.left = boundingBox.top * scale + offsetX
+            mappedBoundingBox.right = boundingBox.bottom * scale + offsetX
             mappedBoundingBox.top = boundingBox.left * scale + offsetY
             mappedBoundingBox.bottom = boundingBox.right * scale + offsetY
-
-            // The Y coordinate in the image corresponds to the X coordinate in the view, with inversion.
-            mappedBoundingBox.left = overlay.width - (boundingBox.bottom * scale + offsetX)
-            mappedBoundingBox.right = overlay.width - (boundingBox.top * scale + offsetX)
 
             // If using the front camera, the image is mirrored horizontally.
             if (overlay.cameraSelector == CameraSelector.LENS_FACING_FRONT) {
