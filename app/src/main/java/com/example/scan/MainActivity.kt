@@ -4,12 +4,11 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.view.MotionEvent
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.Preview
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -65,9 +64,11 @@ class MainActivity : AppCompatActivity() {
             try {
                 cameraProvider.unbindAll()
 
-                cameraProvider.bindToLifecycle(
+                val camera = cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview, imageAnalyzer
                 )
+
+                setupTapToFocus(camera.cameraControl)
 
                 barcodeScannerProcessor =
                     BarcodeScannerProcessor(viewBinding.graphicOverlay, this)
@@ -81,6 +82,19 @@ class MainActivity : AppCompatActivity() {
             }
 
         }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun setupTapToFocus(cameraControl: CameraControl) {
+        viewBinding.previewView.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                val factory = viewBinding.previewView.meteringPointFactory
+                val point = factory.createPoint(event.x, event.y)
+                val action = FocusMeteringAction.Builder(point).build()
+                cameraControl.startFocusAndMetering(action)
+                return@setOnTouchListener true
+            }
+            return@setOnTouchListener false
+        }
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {

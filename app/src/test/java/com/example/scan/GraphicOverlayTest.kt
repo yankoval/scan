@@ -11,6 +11,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.math.min
 
 @RunWith(RobolectricTestRunner::class)
 class GraphicOverlayTest {
@@ -29,7 +30,7 @@ class GraphicOverlayTest {
     }
 
     @Test
-    fun `calculateRect should correctly scale coordinates directly`() {
+    fun `calculateRect should scale and center coordinates correctly`() {
         val imageWidth = 1280
         val imageHeight = 720
         val viewWidth = 1080
@@ -42,11 +43,15 @@ class GraphicOverlayTest {
 
         val scaleX = viewWidth.toFloat() / imageWidth.toFloat()
         val scaleY = viewHeight.toFloat() / imageHeight.toFloat()
+        val scale = min(scaleX, scaleY)
 
-        val expectedLeft = boundingBox.left * scaleX
-        val expectedTop = boundingBox.top * scaleY
-        val expectedRight = boundingBox.right * scaleX
-        val expectedBottom = boundingBox.bottom * scaleY
+        val offsetX = (viewWidth - imageWidth * scale) / 2.0f
+        val offsetY = (viewHeight - imageHeight * scale) / 2.0f
+
+        val expectedLeft = boundingBox.left * scale + offsetX
+        val expectedTop = boundingBox.top * scale + offsetY
+        val expectedRight = boundingBox.right * scale + offsetX
+        val expectedBottom = boundingBox.bottom * scale + offsetY
 
         val expectedRect = RectF(expectedLeft, expectedTop, expectedRight, expectedBottom)
 
