@@ -30,12 +30,12 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
             val mappedBoundingBox = RectF()
 
             // The Y coordinate of the image maps to the X coordinate of the view.
-            mappedBoundingBox.left = boundingBox.top * scaleX + offsetX
-            mappedBoundingBox.right = boundingBox.bottom * scaleX + offsetX
+            mappedBoundingBox.left = boundingBox.left * scaleX + offsetX
+            mappedBoundingBox.right = boundingBox.right * scaleX + offsetX
 
             // The X coordinate of the image maps to the Y coordinate of the view.
-            mappedBoundingBox.top = boundingBox.left * scaleY + offsetY
-            mappedBoundingBox.bottom = boundingBox.right * scaleY + offsetY
+            mappedBoundingBox.top = boundingBox.top * scaleY + offsetY
+            mappedBoundingBox.bottom = boundingBox.bottom * scaleY + offsetY
 
 
             // If using the front camera, the image is mirrored horizontally.
