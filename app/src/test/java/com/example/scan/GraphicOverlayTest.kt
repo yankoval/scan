@@ -29,7 +29,7 @@ class GraphicOverlayTest {
     }
 
     @Test
-    fun `calculateRect should correctly transform coordinates for the back camera`() {
+    fun `calculateRect should correctly scale coordinates directly`() {
         val imageWidth = 1280
         val imageHeight = 720
         val viewWidth = 1080
@@ -40,16 +40,13 @@ class GraphicOverlayTest {
 
         val boundingBox = Rect(300, 400, 500, 600)
 
-        val scaleX = viewWidth.toFloat() / imageHeight
-        val scaleY = viewHeight.toFloat() / imageWidth
+        val scaleX = viewWidth.toFloat() / imageWidth.toFloat()
+        val scaleY = viewHeight.toFloat() / imageHeight.toFloat()
 
-        val offsetX = (viewWidth - imageHeight * minOf(scaleX, scaleY)) / 2.0f
-        val offsetY = (viewHeight - imageWidth * minOf(scaleX, scaleY)) / 2.0f
-
-        val expectedLeft = boundingBox.left * scaleX + offsetX
-        val expectedRight = boundingBox.right * scaleX + offsetX
-        val expectedTop = boundingBox.top * scaleY + offsetY
-        val expectedBottom = boundingBox.bottom * scaleY + offsetY
+        val expectedLeft = boundingBox.left * scaleX
+        val expectedTop = boundingBox.top * scaleY
+        val expectedRight = boundingBox.right * scaleX
+        val expectedBottom = boundingBox.bottom * scaleY
 
         val expectedRect = RectF(expectedLeft, expectedTop, expectedRight, expectedBottom)
 
