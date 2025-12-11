@@ -44,13 +44,13 @@ class GraphicOverlayTest {
         val scaleX = viewWidth.toFloat() / imageWidth.toFloat()
         val scaleY = viewHeight.toFloat() / imageHeight.toFloat()
 
-        val offsetX = (viewWidth - imageWidth * scaleX)
-        val offsetY = (viewHeight - imageHeight * scaleY)
+        val offsetX = (viewWidth - imageWidth * min(scaleX, scaleY)) / 2.0f
+        val offsetY = (viewHeight - imageHeight * min(scaleX, scaleY)) / 2.0f
 
-        val expectedLeft = boundingBox.left * scaleX
-        val expectedTop = boundingBox.top * scaleY
-        val expectedRight = boundingBox.right * scaleX
-        val expectedBottom = boundingBox.bottom * scaleY
+        val expectedLeft = boundingBox.left * scaleX + offsetX
+        val expectedTop = boundingBox.top * scaleY + offsetY
+        val expectedRight = boundingBox.right * scaleX + offsetX
+        val expectedBottom = boundingBox.bottom * scaleY + offsetY
 
         val expectedRect = RectF(expectedLeft, expectedTop, expectedRight, expectedBottom)
 
