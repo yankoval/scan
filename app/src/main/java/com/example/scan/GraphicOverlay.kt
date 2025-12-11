@@ -29,10 +29,10 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
 
             val mappedBoundingBox = RectF()
 
-            mappedBoundingBox.left = boundingBox.left * scaleX + offsetX
-            mappedBoundingBox.right = boundingBox.right * scaleX + offsetX
-            mappedBoundingBox.top = boundingBox.top * scaleY + offsetY
-            mappedBoundingBox.bottom = boundingBox.bottom * scaleY + offsetY
+            mappedBoundingBox.left = boundingBox.left * scaleX 
+            mappedBoundingBox.right = boundingBox.right * scaleX
+            mappedBoundingBox.top = boundingBox.top * scaleY
+            mappedBoundingBox.bottom = boundingBox.bottom * scaleY
 
             // If using the front camera, the image is mirrored horizontally.
             if (overlay.cameraSelector == CameraSelector.LENS_FACING_FRONT) {
