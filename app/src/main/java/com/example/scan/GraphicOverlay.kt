@@ -24,8 +24,8 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
             val scaleY = overlay.height.toFloat() / overlay.imageHeight.toFloat()
 
             // This is the key change: offsets are calculated but not used for scaling
-            val offsetX = (overlay.width.toFloat() - overlay.imageWidth.toFloat() * min(scaleX, scaleY)) / 2.0f
-            val offsetY = (overlay.height.toFloat() - overlay.imageHeight.toFloat() * min(scaleX, scaleY)) / 2.0f
+            val offsetX = (overlay.width.toFloat() - overlay.imageWidth.toFloat() * scaleX) 
+            val offsetY = (overlay.height.toFloat() - overlay.imageHeight.toFloat() * scaleY)
 
             val mappedBoundingBox = RectF()
 
