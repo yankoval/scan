@@ -30,7 +30,7 @@ class GraphicOverlayTest {
     }
 
     @Test
-    fun `calculateRect should scale and center coordinates correctly with separate scaling`() {
+    fun `calculateRect should scale and center coordinates correctly`() {
         val imageWidth = 1280
         val imageHeight = 720
         val viewWidth = 1080
@@ -43,14 +43,15 @@ class GraphicOverlayTest {
 
         val scaleX = viewWidth.toFloat() / imageWidth.toFloat()
         val scaleY = viewHeight.toFloat() / imageHeight.toFloat()
+        val scale = min(scaleX, scaleY)
 
-        val offsetX = (viewWidth - imageWidth * min(scaleX, scaleY)) / 2.0f
-        val offsetY = (viewHeight - imageHeight * min(scaleX, scaleY)) / 2.0f
+        val offsetX = (viewWidth - imageWidth * scale) / 2.0f
+        val offsetY = (viewHeight - imageHeight * scale) / 2.0f
 
-        val expectedLeft = boundingBox.left * scaleX + offsetX
-        val expectedTop = boundingBox.top * scaleY + offsetY
-        val expectedRight = boundingBox.right * scaleX + offsetX
-        val expectedBottom = boundingBox.bottom * scaleY + offsetY
+        val expectedLeft = boundingBox.left * scale + offsetX
+        val expectedTop = boundingBox.top * scale + offsetY
+        val expectedRight = boundingBox.right * scale + offsetX
+        val expectedBottom = boundingBox.bottom * scale + offsetY
 
         val expectedRect = RectF(expectedLeft, expectedTop, expectedRight, expectedBottom)
 
