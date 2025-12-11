@@ -22,17 +22,17 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
         protected fun calculateRect(boundingBox: Rect): RectF {
             val scaleX = overlay.width.toFloat() / overlay.imageWidth.toFloat()
             val scaleY = overlay.height.toFloat() / overlay.imageHeight.toFloat()
-            val scale = min(scaleX, scaleY)
 
-            val offsetX = (overlay.width.toFloat() - overlay.imageWidth.toFloat() * scale) / 2.0f
-            val offsetY = (overlay.height.toFloat() - overlay.imageHeight.toFloat() * scale) / 2.0f
+            // This is the key change: offsets are calculated but not used for scaling
+            val offsetX = (overlay.width.toFloat() - overlay.imageWidth.toFloat() * min(scaleX, scaleY)) / 2.0f
+            val offsetY = (overlay.height.toFloat() - overlay.imageHeight.toFloat() * min(scaleX, scaleY)) / 2.0f
 
             val mappedBoundingBox = RectF()
 
-            mappedBoundingBox.left = boundingBox.left * scale + offsetX
-            mappedBoundingBox.right = boundingBox.right * scale + offsetX
-            mappedBoundingBox.top = boundingBox.top * scale + offsetY
-            mappedBoundingBox.bottom = boundingBox.bottom * scale + offsetY
+            mappedBoundingBox.left = boundingBox.left * scaleX + offsetX
+            mappedBoundingBox.right = boundingBox.right * scaleX + offsetX
+            mappedBoundingBox.top = boundingBox.top * scaleY + offsetY
+            mappedBoundingBox.bottom = boundingBox.bottom * scaleY + offsetY
 
             // If using the front camera, the image is mirrored horizontally.
             if (overlay.cameraSelector == CameraSelector.LENS_FACING_FRONT) {
