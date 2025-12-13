@@ -18,11 +18,16 @@ import java.util.concurrent.Executors
 
 class BarcodeScannerProcessor(
     private val graphicOverlay: GraphicOverlay,
-    context: Context
+    context: Context,
+    private val listener: BarcodeCountListener
 ) {
     private val networkClient = NetworkClient(context)
     private val settingsManager = SettingsManager(context)
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
+
+    interface BarcodeCountListener {
+        fun onBarcodeCount(count: Int)
+    }
 
     private val options = BarcodeScannerOptions.Builder()
         .setBarcodeFormats(
@@ -39,6 +44,9 @@ class BarcodeScannerProcessor(
         val inputImage = InputImage.fromMediaImage(image.image!!, image.imageInfo.rotationDegrees)
         scanner.process(inputImage)
             .addOnSuccessListener(executor) { barcodes ->
+                // Report back the number of detected barcodes
+                listener.onBarcodeCount(barcodes.size)
+
                 graphicOverlay.clear()
                 val validCodes = mutableListOf<String>()
                 for (barcode in barcodes) {
@@ -65,6 +73,7 @@ class BarcodeScannerProcessor(
             }
             .addOnFailureListener(executor) { e ->
                 Log.e("BarcodeScanner", "Error processing image", e)
+                listener.onBarcodeCount(0) // Report 0 on failure
             }
             .addOnCompleteListener {
                 image.close()

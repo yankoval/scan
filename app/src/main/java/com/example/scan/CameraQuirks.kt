@@ -11,7 +11,7 @@ object CameraQuirks {
 
     fun getSupportedResolutions(cameraInfo: CameraInfo): List<Size> {
         val camera2CameraInfo = Camera2CameraInfo.from(cameraInfo)
-        val characteristics = camera2CameraInfo.getCameraCharacteristics(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+        val characteristics = camera2CameraInfo.getCameraCharacteristic(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
 
         val streamConfigurationMap: StreamConfigurationMap? = characteristics?.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
 
