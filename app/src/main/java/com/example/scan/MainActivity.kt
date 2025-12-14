@@ -46,14 +46,14 @@ class MainActivity : AppCompatActivity() {
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
             val preview = Preview.Builder()
-            .setTargetResolution(Size(1280, 720))
+            .setTargetResolution(Size(3840, 2160))
                 .build()
                 .also {
                     it.setSurfaceProvider(viewBinding.previewView.surfaceProvider)
                 }
 
             val imageAnalyzer = ImageAnalysis.Builder()
-            .setTargetResolution(Size(1280, 720))
+            .setTargetResolution(Size(3840, 2160))
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
