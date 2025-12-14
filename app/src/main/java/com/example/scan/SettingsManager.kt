@@ -19,12 +19,20 @@ class SettingsManager(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
 
     fun getServiceUrl(): String {
-        // Try to get from SharedPreferences first, then fallback to assets
-        return sharedPreferences.getString(KEY_SERVICE_URL, null) ?: loadUrlFromAssets()
+        return sharedPreferences.getString(KEY_SERVICE_URL, null) ?: loadSettingsFromAssets().serviceUrl
     }
 
-    private fun saveServiceUrl(url: String) {
-        sharedPreferences.edit().putString(KEY_SERVICE_URL, url).apply()
+    fun getScanTunePeriod(): Long {
+        // -1 is a sentinel value indicating it's not in prefs, so we load from assets
+        val period = sharedPreferences.getLong(KEY_SCAN_TUNE_PERIOD, -1L)
+        return if (period != -1L) period else loadSettingsFromAssets().scan_tune_period
+    }
+
+    private fun saveSettings(settings: Settings) {
+        sharedPreferences.edit()
+            .putString(KEY_SERVICE_URL, settings.serviceUrl)
+            .putLong(KEY_SCAN_TUNE_PERIOD, settings.scan_tune_period)
+            .apply()
     }
 
     suspend fun loadSettingsFromQrCode(url: String) {
@@ -33,7 +41,7 @@ class SettingsManager(private val context: Context) {
             if (response.status.isSuccess()) {
                 val jsonString = response.bodyAsText()
                 val settings = json.decodeFromString<Settings>(jsonString)
-                saveServiceUrl(settings.serviceUrl)
+                saveSettings(settings)
                 Log.d(TAG, "Settings updated successfully from $url")
             } else {
                 Log.e(TAG, "Failed to download settings. Status: ${response.status}")
@@ -43,22 +51,26 @@ class SettingsManager(private val context: Context) {
         }
     }
 
-    private fun loadUrlFromAssets(): String {
+    private fun loadSettingsFromAssets(): Settings {
         return try {
             val jsonString = context.assets.open("settings.json").bufferedReader().use { it.readText() }
-            val settings = json.decodeFromString<Settings>(jsonString)
-            settings.serviceUrl
+            json.decodeFromString<Settings>(jsonString)
         } catch (e: IOException) {
             e.printStackTrace()
-            "https://api.example.com/scandata" // Hardcoded fallback
+            // Hardcoded fallback
+            Settings("https://api.example.com/scandata", 3L)
         }
     }
 
     companion object {
         private const val KEY_SERVICE_URL = "service_url"
+        private const val KEY_SCAN_TUNE_PERIOD = "scan_tune_period"
         private const val TAG = "SettingsManager"
     }
 }
 
 @Serializable
-private data class Settings(val serviceUrl: String)
+private data class Settings(
+    val serviceUrl: String,
+    val scan_tune_period: Long = 3L // Default value
+)

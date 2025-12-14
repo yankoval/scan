@@ -1,3 +1,4 @@
 {
-  "serviceUrl": "https://api.example.com/scandata"
+  "serviceUrl": "https://api.example.com/scandata",
+  "scan_tune_period": 3
 }
