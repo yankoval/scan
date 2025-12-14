@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main", "feature/barcode-validation" ]
+    branches: [ "main", "feature/barcode-validation", "feature/barcode-validation-10124382032452244968" ]
   pull_request:
     branches: [ "main" ]
 
