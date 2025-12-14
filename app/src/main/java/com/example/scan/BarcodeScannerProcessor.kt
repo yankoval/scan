@@ -28,7 +28,7 @@ class BarcodeScannerProcessor(
     private var isFocusTriggered = false
 
     interface OnFocusRequiredListener {
-        fun onFocusRequired(point: PointF)
+        fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int, rotationDegrees: Int)
     }
 
     private val options = BarcodeScannerOptions.Builder()
@@ -43,20 +43,32 @@ class BarcodeScannerProcessor(
     private val executor: Executor = Executors.newSingleThreadExecutor()
 
     fun processImageProxy(image: androidx.camera.core.ImageProxy) {
-        val inputImage = InputImage.fromMediaImage(image.image!!, image.imageInfo.rotationDegrees)
+        val mediaImage = image.image
+        if (mediaImage == null) {
+            image.close()
+            return
+        }
+
+        val rotationDegrees = image.imageInfo.rotationDegrees
+        val inputImage = InputImage.fromMediaImage(mediaImage, rotationDegrees)
+
         scanner.process(inputImage)
             .addOnSuccessListener(executor) { barcodes ->
 
-                if (barcodes.isNotEmpty() && !isFocusTriggered) {
+                val barcodesWithBounds = barcodes.filter { it.boundingBox != null }
+
+                if (barcodesWithBounds.isNotEmpty() && !isFocusTriggered) {
                     isFocusTriggered = true
-                    val centerPoint = calculateAverageCenter(barcodes)
-                    focusListener.onFocusRequired(centerPoint)
+                    val centerPoint = calculateAverageCenter(barcodesWithBounds)
+                    focusListener.onFocusRequired(centerPoint, image.width, image.height, rotationDegrees)
                 } else if (barcodes.isEmpty()) {
                     isFocusTriggered = false
                 }
 
                 graphicOverlay.clear()
                 val validCodes = mutableListOf<String>()
+                // Update overlay with the latest rotation before drawing
+                graphicOverlay.setRotationInfo(rotationDegrees)
                 for (barcode in barcodes) {
                     if (barcode.format == Barcode.FORMAT_QR_CODE && barcode.rawValue?.startsWith("http") == true) {
                         coroutineScope.launch {
@@ -114,9 +126,11 @@ class BarcodeScannerProcessor(
         }
 
         override fun draw(canvas: Canvas) {
-            val rect = calculateRect(barcode.boundingBox!!)
-            boundingRectPaint.color = if (isValid) Color.GREEN else Color.GRAY
-            canvas.drawRect(rect, boundingRectPaint)
+            barcode.boundingBox?.let {
+                val rect = calculateRect(it)
+                boundingRectPaint.color = if (isValid) Color.GREEN else Color.GRAY
+                canvas.drawRect(rect, boundingRectPaint)
+            }
         }
     }
 }

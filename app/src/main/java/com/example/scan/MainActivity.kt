@@ -34,7 +34,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         if (allPermissionsGranted()) {
-            startCamera()
+            // Wait for the view to be laid out before starting the camera
+            viewBinding.previewView.post {
+                startCamera()
+            }
         } else {
             ActivityCompat.requestPermissions(
                 this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
@@ -78,9 +81,16 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
                 this.cameraControl = camera.cameraControl
                 setupTapToFocus(this.cameraControl!!)
 
-                val width = imageAnalyzer.resolutionInfo!!.resolution.width
-                val height = imageAnalyzer.resolutionInfo!!.resolution.height
-                viewBinding.graphicOverlay.setCameraInfo(width, height, cameraSelector.lensFacing!!)
+                val resolutionInfo = imageAnalyzer.resolutionInfo
+                if (resolutionInfo != null) {
+                    viewBinding.graphicOverlay.setCameraInfo(
+                        resolutionInfo.resolution.width,
+                        resolutionInfo.resolution.height,
+                        cameraSelector.lensFacing!!
+                    )
+                } else {
+                     viewBinding.graphicOverlay.setCameraInfo(3840, 2160, cameraSelector.lensFacing!!)
+                }
 
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
@@ -89,18 +99,19 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
         }, ContextCompat.getMainExecutor(this))
     }
 
-    override fun onFocusRequired(point: PointF) {
-        // The point is in the image analysis coordinate system.
-        // We need to trigger focus in the preview view coordinate system.
-        // Since both have the same aspect ratio (16:9) and the graphic overlay handles the mapping,
-        // we can create a metering point directly.
-        val factory = viewBinding.previewView.meteringPointFactory
-        // Note: This assumes the point from ML Kit is in the same orientation as the preview view.
-        // This might need adjustment if rotation degrees are different.
-        val meteringPoint = factory.createPoint(point.x, point.y)
-        val action = FocusMeteringAction.Builder(meteringPoint).build()
-        cameraControl?.startFocusAndMetering(action)
-        Log.d(TAG, "Auto-focus triggered at: $point")
+    override fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int, rotationDegrees: Int) {
+        // Check if the view is laid out before proceeding
+        if (viewBinding.previewView.width == 0 || viewBinding.previewView.height == 0) {
+            return
+        }
+        runOnUiThread {
+            val translatedPoint = viewBinding.graphicOverlay.translatePoint(point, imageWidth, imageHeight, rotationDegrees)
+            val factory = viewBinding.previewView.meteringPointFactory
+            val meteringPoint = factory.createPoint(translatedPoint.x, translatedPoint.y)
+            val action = FocusMeteringAction.Builder(meteringPoint).build()
+            cameraControl?.startFocusAndMetering(action)
+            Log.d(TAG, "Auto-focus triggered at translated point: $translatedPoint")
+        }
     }
 
     private fun setupTapToFocus(cameraControl: CameraControl) {
@@ -130,7 +141,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
-                startCamera()
+                // Wait for the view to be laid out before starting the camera
+                viewBinding.previewView.post {
+                    startCamera()
+                }
             } else {
                 Toast.makeText(
                     this,
