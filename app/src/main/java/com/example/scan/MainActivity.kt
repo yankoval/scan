@@ -2,6 +2,7 @@ package com.example.scan
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.PointF
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
@@ -17,11 +18,12 @@ import com.example.scan.databinding.ActivityMainBinding
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequiredListener {
 
     private lateinit var viewBinding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
     private var barcodeScannerProcessor: BarcodeScannerProcessor? = null
+    private var cameraControl: CameraControl? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,21 +48,23 @@ class MainActivity : AppCompatActivity() {
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
             val preview = Preview.Builder()
-            .setTargetResolution(Size(3840, 2160))
+                .setTargetResolution(Size(3840, 2160))
                 .build()
                 .also {
                     it.setSurfaceProvider(viewBinding.previewView.surfaceProvider)
                 }
 
             val imageAnalyzer = ImageAnalysis.Builder()
-            .setTargetResolution(Size(3840, 2160))
+                .setTargetResolution(Size(3840, 2160))
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
-                .also {
-                    it.setAnalyzer(cameraExecutor) { imageProxy ->
-                        barcodeScannerProcessor?.processImageProxy(imageProxy)
-                    }
+
+            barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this)
+            imageAnalyzer.also {
+                it.setAnalyzer(cameraExecutor) { imageProxy ->
+                    barcodeScannerProcessor?.processImageProxy(imageProxy)
                 }
+            }
 
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
@@ -71,10 +75,8 @@ class MainActivity : AppCompatActivity() {
                     this, cameraSelector, preview, imageAnalyzer
                 )
 
-                setupTapToFocus(camera.cameraControl)
-
-                barcodeScannerProcessor =
-                    BarcodeScannerProcessor(viewBinding.graphicOverlay, this)
+                this.cameraControl = camera.cameraControl
+                setupTapToFocus(this.cameraControl!!)
 
                 val width = imageAnalyzer.resolutionInfo!!.resolution.width
                 val height = imageAnalyzer.resolutionInfo!!.resolution.height
@@ -85,6 +87,20 @@ class MainActivity : AppCompatActivity() {
             }
 
         }, ContextCompat.getMainExecutor(this))
+    }
+
+    override fun onFocusRequired(point: PointF) {
+        // The point is in the image analysis coordinate system.
+        // We need to trigger focus in the preview view coordinate system.
+        // Since both have the same aspect ratio (16:9) and the graphic overlay handles the mapping,
+        // we can create a metering point directly.
+        val factory = viewBinding.previewView.meteringPointFactory
+        // Note: This assumes the point from ML Kit is in the same orientation as the preview view.
+        // This might need adjustment if rotation degrees are different.
+        val meteringPoint = factory.createPoint(point.x, point.y)
+        val action = FocusMeteringAction.Builder(meteringPoint).build()
+        cameraControl?.startFocusAndMetering(action)
+        Log.d(TAG, "Auto-focus triggered at: $point")
     }
 
     private fun setupTapToFocus(cameraControl: CameraControl) {

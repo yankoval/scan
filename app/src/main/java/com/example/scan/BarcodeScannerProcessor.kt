@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PointF
 import android.util.Log
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -18,11 +19,17 @@ import java.util.concurrent.Executors
 
 class BarcodeScannerProcessor(
     private val graphicOverlay: GraphicOverlay,
-    context: Context
+    context: Context,
+    private val focusListener: OnFocusRequiredListener
 ) {
     private val networkClient = NetworkClient(context)
     private val settingsManager = SettingsManager(context)
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private var isFocusTriggered = false
+
+    interface OnFocusRequiredListener {
+        fun onFocusRequired(point: PointF)
+    }
 
     private val options = BarcodeScannerOptions.Builder()
         .setBarcodeFormats(
@@ -39,15 +46,23 @@ class BarcodeScannerProcessor(
         val inputImage = InputImage.fromMediaImage(image.image!!, image.imageInfo.rotationDegrees)
         scanner.process(inputImage)
             .addOnSuccessListener(executor) { barcodes ->
+
+                if (barcodes.isNotEmpty() && !isFocusTriggered) {
+                    isFocusTriggered = true
+                    val centerPoint = calculateAverageCenter(barcodes)
+                    focusListener.onFocusRequired(centerPoint)
+                } else if (barcodes.isEmpty()) {
+                    isFocusTriggered = false
+                }
+
                 graphicOverlay.clear()
                 val validCodes = mutableListOf<String>()
                 for (barcode in barcodes) {
-                    // Handle QR code for settings update
                     if (barcode.format == Barcode.FORMAT_QR_CODE && barcode.rawValue?.startsWith("http") == true) {
                         coroutineScope.launch {
                             settingsManager.loadSettingsFromQrCode(barcode.rawValue!!)
                         }
-                        graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, true)) // Always show QR as valid
+                        graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, true))
                     } else {
                         val isValid = checkLogic(barcode)
                         graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, isValid))
@@ -65,14 +80,25 @@ class BarcodeScannerProcessor(
             }
             .addOnFailureListener(executor) { e ->
                 Log.e("BarcodeScanner", "Error processing image", e)
+                isFocusTriggered = false
             }
             .addOnCompleteListener {
                 image.close()
             }
     }
 
+    private fun calculateAverageCenter(barcodes: List<Barcode>): PointF {
+        var totalX = 0f
+        var totalY = 0f
+        barcodes.forEach { barcode ->
+            val boundingBox = barcode.boundingBox!!
+            totalX += boundingBox.centerX()
+            totalY += boundingBox.centerY()
+        }
+        return PointF(totalX / barcodes.size, totalY / barcodes.size)
+    }
+
     private fun checkLogic(barcode: Barcode): Boolean {
-        // This is a placeholder for your logic check.
         return barcode.rawValue?.length ?: 0 > 5
     }
 
