@@ -34,7 +34,6 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         if (allPermissionsGranted()) {
-            // Wait for the view to be laid out before starting the camera
             viewBinding.previewView.post {
                 startCamera()
             }
@@ -81,17 +80,6 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
                 this.cameraControl = camera.cameraControl
                 setupTapToFocus(this.cameraControl!!)
 
-                val resolutionInfo = imageAnalyzer.resolutionInfo
-                if (resolutionInfo != null) {
-                    viewBinding.graphicOverlay.setCameraInfo(
-                        resolutionInfo.resolution.width,
-                        resolutionInfo.resolution.height,
-                        cameraSelector.lensFacing!!
-                    )
-                } else {
-                     viewBinding.graphicOverlay.setCameraInfo(3840, 2160, cameraSelector.lensFacing!!)
-                }
-
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
@@ -99,13 +87,15 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
         }, ContextCompat.getMainExecutor(this))
     }
 
-    override fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int, rotationDegrees: Int) {
-        // Check if the view is laid out before proceeding
+    override fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int) {
         if (viewBinding.previewView.width == 0 || viewBinding.previewView.height == 0) {
             return
         }
         runOnUiThread {
-            val translatedPoint = viewBinding.graphicOverlay.translatePoint(point, imageWidth, imageHeight, rotationDegrees)
+            // The translatePoint is now stateless and doesn't need rotation.
+            // But we still need to provide the image dimensions.
+            // The logic in GraphicOverlay is now simplified, let's call the simplified translatePoint
+             val translatedPoint = viewBinding.graphicOverlay.translatePoint(point)
             val factory = viewBinding.previewView.meteringPointFactory
             val meteringPoint = factory.createPoint(translatedPoint.x, translatedPoint.y)
             val action = FocusMeteringAction.Builder(meteringPoint).build()
@@ -141,7 +131,6 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
-                // Wait for the view to be laid out before starting the camera
                 viewBinding.previewView.post {
                     startCamera()
                 }

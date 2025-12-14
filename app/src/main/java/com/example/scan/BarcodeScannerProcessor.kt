@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PointF
 import android.util.Log
+import androidx.camera.core.CameraSelector
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -28,7 +29,7 @@ class BarcodeScannerProcessor(
     private var isFocusTriggered = false
 
     interface OnFocusRequiredListener {
-        fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int, rotationDegrees: Int)
+        fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int)
     }
 
     private val options = BarcodeScannerOptions.Builder()
@@ -55,20 +56,20 @@ class BarcodeScannerProcessor(
         scanner.process(inputImage)
             .addOnSuccessListener(executor) { barcodes ->
 
+                graphicOverlay.setCameraInfo(image.width, image.height, CameraSelector.LENS_FACING_BACK)
+
                 val barcodesWithBounds = barcodes.filter { it.boundingBox != null }
 
                 if (barcodesWithBounds.isNotEmpty() && !isFocusTriggered) {
                     isFocusTriggered = true
                     val centerPoint = calculateAverageCenter(barcodesWithBounds)
-                    focusListener.onFocusRequired(centerPoint, image.width, image.height, rotationDegrees)
+                    focusListener.onFocusRequired(centerPoint, image.width, image.height)
                 } else if (barcodes.isEmpty()) {
                     isFocusTriggered = false
                 }
 
                 graphicOverlay.clear()
                 val validCodes = mutableListOf<String>()
-                // Update overlay with the latest rotation before drawing
-                graphicOverlay.setRotationInfo(rotationDegrees)
                 for (barcode in barcodes) {
                     if (barcode.format == Barcode.FORMAT_QR_CODE && barcode.rawValue?.startsWith("http") == true) {
                         coroutineScope.launch {

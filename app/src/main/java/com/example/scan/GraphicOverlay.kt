@@ -15,33 +15,26 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
     private val graphics: MutableList<Graphic> = ArrayList()
     private var imageWidth: Int = 0
     private var imageHeight: Int = 0
-    private var rotationDegrees: Int = 0
     private var cameraSelector: Int = CameraSelector.LENS_FACING_BACK
 
     abstract class Graphic(private val overlay: GraphicOverlay) {
         abstract fun draw(canvas: Canvas)
 
         protected fun calculateRect(boundingBox: Rect): RectF {
-            val translatedPoint = overlay.translatePoint(
-                PointF(boundingBox.left.toFloat(), boundingBox.top.toFloat()),
-                overlay.imageWidth,
-                overlay.imageHeight,
-                overlay.rotationDegrees
-            )
-            val translatedRight = overlay.translatePoint(
-                PointF(boundingBox.right.toFloat(), boundingBox.top.toFloat()),
-                overlay.imageWidth,
-                overlay.imageHeight,
-                overlay.rotationDegrees
-            ).x
-            val translatedBottom = overlay.translatePoint(
-                PointF(boundingBox.left.toFloat(), boundingBox.bottom.toFloat()),
-                overlay.imageWidth,
-                overlay.imageHeight,
-                overlay.rotationDegrees
-            ).y
+            val scaleX = overlay.width.toFloat() / overlay.imageWidth.toFloat()
+            val scaleY = overlay.height.toFloat() / overlay.imageHeight.toFloat()
+            val scale = min(scaleX, scaleY)
 
-            return RectF(translatedPoint.x, translatedPoint.y, translatedRight, translatedBottom)
+            val offsetX = (overlay.width.toFloat() - (overlay.imageWidth.toFloat() * scale)) / 2.0f
+            val offsetY = (overlay.height.toFloat() - (overlay.imageHeight.toFloat() * scale)) / 2.0f
+
+            val mappedBoundingBox = RectF()
+            mappedBoundingBox.left = boundingBox.left * scale + offsetX
+            mappedBoundingBox.top = boundingBox.top * scale + offsetY
+            mappedBoundingBox.right = boundingBox.right * scale + offsetX
+            mappedBoundingBox.bottom = boundingBox.bottom * scale + offsetY
+
+            return mappedBoundingBox
         }
     }
 
@@ -52,48 +45,18 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
         postInvalidate()
     }
 
-    fun translatePoint(point: PointF, imageWidth: Int, imageHeight: Int, rotation: Int): PointF {
-        val viewWidth = width.toFloat()
-        val viewHeight = height.toFloat()
-        val imageWidthF = imageWidth.toFloat()
-        val imageHeightF = imageHeight.toFloat()
-
-        // Determine if the image is rotated by 90 or 270 degrees.
-        val isrotated = rotation % 180 != 0
-        val rotatedWidth = if (isrotated) imageHeightF else imageWidthF
-        val rotatedHeight = if (isrotated) imageWidthF else imageHeightF
-
-        val scaleX = viewWidth / rotatedWidth
-        val scaleY = viewHeight / rotatedHeight
+    fun translatePoint(point: PointF): PointF {
+        val scaleX = width.toFloat() / imageWidth.toFloat()
+        val scaleY = height.toFloat() / imageHeight.toFloat()
         val scale = min(scaleX, scaleY)
 
-        val offsetX = (viewWidth - rotatedWidth * scale) / 2.0f
-        val offsetY = (viewHeight - rotatedHeight * scale) / 2.0f
+        val offsetX = (width.toFloat() - (imageWidth.toFloat() * scale)) / 2.0f
+        val offsetY = (height.toFloat() - (imageHeight.toFloat() * scale)) / 2.0f
 
-        val transformedX: Float
-        val transformedY: Float
+        val translatedX = point.x * scale + offsetX
+        val translatedY = point.y * scale + offsetY
 
-        when (rotation) {
-            0 -> {
-                transformedX = point.x * scale + offsetX
-                transformedY = point.y * scale + offsetY
-            }
-            90 -> {
-                transformedX = (imageHeightF - point.y) * scale + offsetX
-                transformedY = point.x * scale + offsetY
-            }
-            180 -> {
-                transformedX = (imageWidthF - point.x) * scale + offsetX
-                transformedY = (imageHeightF - point.y) * scale + offsetY
-            }
-            270 -> {
-                transformedX = point.y * scale + offsetX
-                transformedY = (imageWidthF - point.x) * scale + offsetY
-            }
-            else -> throw IllegalArgumentException("Invalid rotation degree: $rotation")
-        }
-
-        return PointF(transformedX, transformedY)
+        return PointF(translatedX, translatedY)
     }
 
     fun add(graphic: Graphic) {
@@ -108,14 +71,6 @@ class GraphicOverlay(context: Context, attrs: AttributeSet?) : View(context, att
             imageHeight = height
             cameraSelector = facing
         }
-        postInvalidate()
-    }
-
-    fun setRotationInfo(rotation: Int) {
-        synchronized(lock) {
-            rotationDegrees = rotation
-        }
-        postInvalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
