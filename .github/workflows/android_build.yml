@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main" ,"eat/scanner-improvements"]
+    branches: [ "main" ,"feat/scanner-improvements"]
   pull_request:
     branches: [ "main" ]
 
