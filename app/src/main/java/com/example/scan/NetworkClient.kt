@@ -9,6 +9,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 
 @Serializable
 data class ScanRequest(val codes: List<String>)
@@ -29,12 +30,14 @@ class NetworkClient(context: Context) {
         try {
             val url = settingsManager.getServiceUrl()
             val requestBody = ScanRequest(codes)
+            Timber.d("Sending ${codes.size} codes to $url")
             client.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(requestBody)
             }
+            Timber.i("Successfully sent codes to server.")
         } catch (e: Exception) {
-            e.printStackTrace()
+            Timber.e(e, "Error sending data to server")
         }
     }
 }

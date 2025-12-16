@@ -1,7 +1,6 @@
 package com.example.scan
 
 import android.content.Context
-import android.util.Log
 import androidx.preference.PreferenceManager
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -10,6 +9,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.isSuccess
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 import java.io.IOException
 
 class SettingsManager(private val context: Context) {
@@ -19,12 +19,19 @@ class SettingsManager(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
 
     fun getServiceUrl(): String {
-        // Try to get from SharedPreferences first, then fallback to assets
-        return sharedPreferences.getString(KEY_SERVICE_URL, null) ?: loadUrlFromAssets()
+        return sharedPreferences.getString(KEY_SERVICE_URL, null) ?: loadSettingsFromAssets().serviceUrl
     }
 
-    private fun saveServiceUrl(url: String) {
-        sharedPreferences.edit().putString(KEY_SERVICE_URL, url).apply()
+    fun getMaxLogSizeMb(): Long {
+        return sharedPreferences.getLong(KEY_MAX_LOG_SIZE_MB, -1L).takeIf { it != -1L }
+            ?: loadSettingsFromAssets().maxLogSizeMb
+    }
+
+    private fun saveSettings(settings: Settings) {
+        sharedPreferences.edit()
+            .putString(KEY_SERVICE_URL, settings.serviceUrl)
+            .putLong(KEY_MAX_LOG_SIZE_MB, settings.maxLogSizeMb)
+            .apply()
     }
 
     suspend fun loadSettingsFromQrCode(url: String) {
@@ -33,32 +40,35 @@ class SettingsManager(private val context: Context) {
             if (response.status.isSuccess()) {
                 val jsonString = response.bodyAsText()
                 val settings = json.decodeFromString<Settings>(jsonString)
-                saveServiceUrl(settings.serviceUrl)
-                Log.d(TAG, "Settings updated successfully from $url")
+                saveSettings(settings)
+                Timber.d("Settings updated successfully from $url")
             } else {
-                Log.e(TAG, "Failed to download settings. Status: ${response.status}")
+                Timber.e("Failed to download settings. Status: ${response.status}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error downloading settings", e)
+            Timber.e(e, "Error downloading settings")
         }
     }
 
-    private fun loadUrlFromAssets(): String {
+    private fun loadSettingsFromAssets(): Settings {
         return try {
             val jsonString = context.assets.open("settings.json").bufferedReader().use { it.readText() }
-            val settings = json.decodeFromString<Settings>(jsonString)
-            settings.serviceUrl
+            json.decodeFromString<Settings>(jsonString)
         } catch (e: IOException) {
-            e.printStackTrace()
-            "https://api.example.com/scandata" // Hardcoded fallback
+            Timber.e(e, "Error loading settings from assets")
+            // Hardcoded fallback
+            Settings("https://api.example.com/scandata", 10L)
         }
     }
 
     companion object {
         private const val KEY_SERVICE_URL = "service_url"
-        private const val TAG = "SettingsManager"
+        private const val KEY_MAX_LOG_SIZE_MB = "max_log_size_mb"
     }
 }
 
 @Serializable
-private data class Settings(val serviceUrl: String)
+private data class Settings(
+    val serviceUrl: String,
+    val maxLogSizeMb: Long = 10L
+)

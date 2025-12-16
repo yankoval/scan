@@ -1,0 +1,15 @@
+package com.example.scan
+
+import android.app.Application
+import timber.log.Timber
+
+class App : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+
+        // Initialize Timber
+        val settingsManager = SettingsManager(this)
+        Timber.plant(FileLoggingTree(this, settingsManager))
+    }
+}

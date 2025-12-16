@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.PointF
 import android.os.Bundle
-import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
 import android.view.WindowManager
@@ -15,6 +14,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.scan.databinding.ActivityMainBinding
+import timber.log.Timber
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -79,9 +79,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
 
                 this.cameraControl = camera.cameraControl
                 setupTapToFocus(this.cameraControl!!)
+                Timber.d("MainActivity, startCamera, Camera started successfully.")
 
             } catch (exc: Exception) {
-                Log.e(TAG, "Use case binding failed", exc)
+                Timber.e(exc, "MainActivity, startCamera, Use case binding failed")
             }
 
         }, ContextCompat.getMainExecutor(this))
@@ -92,15 +93,12 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
             return
         }
         runOnUiThread {
-            // The translatePoint is now stateless and doesn't need rotation.
-            // But we still need to provide the image dimensions.
-            // The logic in GraphicOverlay is now simplified, let's call the simplified translatePoint
-             val translatedPoint = viewBinding.graphicOverlay.translatePoint(point)
+            val translatedPoint = viewBinding.graphicOverlay.translatePoint(point)
             val factory = viewBinding.previewView.meteringPointFactory
             val meteringPoint = factory.createPoint(translatedPoint.x, translatedPoint.y)
             val action = FocusMeteringAction.Builder(meteringPoint).build()
             cameraControl?.startFocusAndMetering(action)
-            Log.d(TAG, "Auto-focus triggered at translated point: $translatedPoint")
+            Timber.d("MainActivity, onFocusRequired, Auto-focus triggered at point: $point")
         }
     }
 
@@ -111,6 +109,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
                 val point = factory.createPoint(event.x, event.y)
                 val action = FocusMeteringAction.Builder(point).build()
                 cameraControl.startFocusAndMetering(action)
+                Timber.d("MainActivity, setupTapToFocus, Manual focus triggered at point: ($point.x, $point.y)")
                 return@setOnTouchListener true
             }
             return@setOnTouchListener false
@@ -151,7 +150,6 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
     }
 
     companion object {
-        private const val TAG = "CameraX-MLKit"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS =
             mutableListOf(

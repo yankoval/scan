@@ -77,6 +77,9 @@ dependencies {
     // Preferences
     implementation("androidx.preference:preference-ktx:1.2.1")
 
+    // Logging
+    implementation("com.jakewharton.timber:timber:5.0.1")
+
     // Unit testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.11.1")

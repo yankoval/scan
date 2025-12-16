@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PointF
-import android.util.Log
 import androidx.camera.core.CameraSelector
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -15,6 +14,7 @@ import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
@@ -58,6 +58,13 @@ class BarcodeScannerProcessor(
 
                 graphicOverlay.setCameraInfo(image.width, image.height, CameraSelector.LENS_FACING_BACK)
 
+                if (barcodes.isNotEmpty()) {
+                    Timber.d("BarcodeScannerProcessor, processImageProxy, ${barcodes.size} barcodes detected.")
+                    for (barcode in barcodes) {
+                        Timber.d("BarcodeScannerProcessor, processImageProxy, Barcode value: ${barcode.rawValue}")
+                    }
+                }
+
                 val barcodesWithBounds = barcodes.filter { it.boundingBox != null }
 
                 if (barcodesWithBounds.isNotEmpty() && !isFocusTriggered) {
@@ -92,7 +99,7 @@ class BarcodeScannerProcessor(
                 graphicOverlay.postInvalidate()
             }
             .addOnFailureListener(executor) { e ->
-                Log.e("BarcodeScanner", "Error processing image", e)
+                Timber.e(e, "BarcodeScannerProcessor, processImageProxy, Error processing image")
                 isFocusTriggered = false
             }
             .addOnCompleteListener {
