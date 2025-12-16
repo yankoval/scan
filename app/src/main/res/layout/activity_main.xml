@@ -21,4 +21,14 @@
         app:layout_constraintRight_toRightOf="@id/preview_view"
         app:layout_constraintTop_toTopOf="@id/preview_view" />
 
+    <Button
+        android:id="@+id/export_logs_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Export Logs"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginBottom="24dp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

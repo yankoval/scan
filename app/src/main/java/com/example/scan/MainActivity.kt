@@ -1,6 +1,8 @@
 package com.example.scan
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.PointF
 import android.os.Bundle
@@ -8,6 +10,7 @@ import android.util.Size
 import android.view.MotionEvent
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -15,6 +18,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.scan.databinding.ActivityMainBinding
 import timber.log.Timber
+import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -25,23 +30,68 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
     private var barcodeScannerProcessor: BarcodeScannerProcessor? = null
     private var cameraControl: CameraControl? = null
 
+    private val exportLogsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                try {
+                    val logFile = getLogFile()
+                    if (logFile.exists()) {
+                        contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            logFile.inputStream().use { inputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
+                        }
+                        Toast.makeText(this, "Logs exported successfully.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "Log file not found.", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Timber.e(e, "Error exporting logs")
+                    Toast.makeText(this, "Error exporting logs.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(viewBinding.root)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        setupFileLogging()
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         if (allPermissionsGranted()) {
-            viewBinding.previewView.post {
-                startCamera()
-            }
+            viewBinding.previewView.post { startCamera() }
         } else {
-            ActivityCompat.requestPermissions(
-                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
-            )
+            ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
+
+        viewBinding.exportLogsButton.setOnClickListener {
+            exportLogs()
+        }
+    }
+
+    private fun exportLogs() {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TITLE, "scan_debug.log")
+        }
+        exportLogsLauncher.launch(intent)
+    }
+
+    private fun getLogFile(): File {
+        val documentsDir = getExternalFilesDir("Documents")
+        val logDir = File(documentsDir, "scan")
+        return File(logDir, "debug.log")
+    }
+
+    private fun setupFileLogging() {
+        val settingsManager = SettingsManager(this)
+        Timber.plant(FileLoggingTree(this, settingsManager))
+        Timber.i("File logging initialized.")
     }
 
     private fun startCamera() {

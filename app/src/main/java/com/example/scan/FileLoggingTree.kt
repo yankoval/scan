@@ -13,13 +13,15 @@ class FileLoggingTree(
     private val settingsManager: SettingsManager
 ) : Timber.DebugTree() {
 
-    private val logFile: File by lazy {
+    private val logFile: File? by lazy {
         val documentsDir = context.getExternalFilesDir("Documents")
-        val logDir = File(documentsDir, "scan")
-        if (!logDir.exists()) {
-            logDir.mkdirs()
+        if (documentsDir == null) {
+            Log.e("FileLoggingTree", "External storage not available. File logging is disabled.")
+            null
+        } else {
+            val logDir = File(documentsDir, "scan")
+            File(logDir, "debug.log")
         }
-        File(logDir, "debug.log")
     }
 
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
@@ -27,8 +29,15 @@ class FileLoggingTree(
             return
         }
 
+        val currentLogFile = logFile ?: return
+
         try {
-            checkAndRotateLog()
+            val logDir = currentLogFile.parentFile
+            if (logDir != null && !logDir.exists()) {
+                logDir.mkdirs()
+            }
+
+            checkAndRotateLog(currentLogFile)
 
             val timeStamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date())
             val level = when (priority) {
@@ -41,27 +50,30 @@ class FileLoggingTree(
             }
 
             val appName = "scan"
-            // Use the provided tag as the procedure/component
             val procedure = tag ?: "Unknown"
 
-            // Format: Время, уровень, приложение, процедура, строка
             val formattedMessage = "$timeStamp, $level, $appName, $procedure, $message\n"
 
-            logFile.appendText(formattedMessage)
+            if (currentLogFile.parentFile?.exists() == true) {
+                currentLogFile.appendText(formattedMessage)
+            }
 
         } catch (e: Exception) {
             Log.e("FileLoggingTree", "Error writing to log file", e)
         }
     }
 
-    private fun checkAndRotateLog() {
+    private fun checkAndRotateLog(file: File) {
+        if (!file.exists()) {
+            return
+        }
         val maxLogSize = settingsManager.getMaxLogSizeMb() * 1024 * 1024 // to Bytes
-        if (logFile.exists() && logFile.length() > maxLogSize) {
-            val backupFile = File(logFile.parent, "debug.log.1")
+        if (file.length() > maxLogSize) {
+            val backupFile = File(file.parent, "debug.log.1")
             if (backupFile.exists()) {
                 backupFile.delete()
             }
-            logFile.renameTo(backupFile)
+            file.renameTo(backupFile)
         }
     }
 }
