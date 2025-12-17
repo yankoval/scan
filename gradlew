@@ -16,35 +16,11 @@
 # limitations under the License.
 #
 
-##############################################################################
-##
-##  Gradle start up script for UN*X
-##
-##############################################################################
-
-# Attempt to set APP_HOME
-# Resolve links: $0 may be a link
-PRG="$0"
-# Need this for relative symlinks.
-while [ -h "$PRG" ] ; do
-    ls=`ls -ld "$PRG"`
-    link=`expr "$ls" : '.*-> \(.*\)$'`
-    if expr "$link" : '/.*' > /dev/null; then
-        PRG="$link"
-    else
-        PRG=`dirname "$PRG"`"/$link"
-    fi
-done
-SAVED="`pwd`"
-cd "`dirname \"$PRG\"`/" >/dev/null
-APP_HOME="`pwd -P`"
-cd "$SAVED" >/dev/null
+# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+DEFAULT_JVM_OPTS=""
 
 APP_NAME="Gradle"
 APP_BASE_NAME=`basename "$0"`
-
-# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
-DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
 
 # Use the maximum available, or set MAX_FD != -1 to use that value.
 MAX_FD="maximum"
@@ -55,7 +31,7 @@ warn () {
 
 die () {
     echo
-    echo "$*"
+    echo "ERROR: $*"
     echo
     exit 1
 }
@@ -80,99 +56,85 @@ case "`uname`" in
     ;;
 esac
 
+# Attempt to set APP_HOME
+# Resolve links: $0 may be a link
+PRG="$0"
+# Need this for relative symlinks.
+while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+        PRG="$link"
+    else
+        PRG=`dirname "$PRG"`"/$link"
+    fi
+done
+SAVED="`pwd`"
+cd "`dirname \"$PRG\"`/" >/dev/null
+APP_HOME="`pwd -P`"
+cd "$SAVED" >/dev/null
+
 # For Cygwin, ensure paths are in UNIX format before anything is touched.
 if ${cygwin} ; then
-    [ -n "$JAVA_HOME" ] && JAVA_HOME=`cygpath --unix "$JAVA_HOME"`
+    [ -n "$APP_HOME" ] &&
+        APP_HOME=`cygpath --unix "$APP_HOME"`
+    [ -n "$JAVA_HOME" ] &&
+        JAVA_HOME=`cygpath --unix "$JAVA_HOME"`
+    [ -n "$CLASSPATH" ] &&
+        CLASSPATH=`cygpath --path --unix "$CLASSPATH"`
 fi
 
-# Attempt to find java
+# Attempt to set JAVA_HOME if it's not already set.
 if [ -z "$JAVA_HOME" ] ; then
-    # try to use JDK7 if available
-    if [ -d /usr/lib/jvm/java-7-oracle/bin ] ; then
-        JAVA_HOME=/usr/lib/jvm/java-7-oracle
-    elif [ -d /usr/lib/jvm/java-7-openjdk/bin ] ; then
-        JAVA_HOME=/usr/lib/jvm/java-7-openjdk
-    elif [ -d /usr/lib/jvm/java-7-openjdk-amd64/bin ] ; then
-        JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
-    else
-        # fall back to the JAVA_HOME from the environment
-        JAVA_HOME=`type -p java`
-        JAVA_HOME=`dirname \`dirname \`readlink -f $JAVA_HOME\ \`\ \``
+    if ${darwin} ; then
+        [ -x '/usr/libexec/java_home' ] && JAVA_HOME=`/usr/libexec/java_home`
     fi
 fi
 if [ -z "$JAVA_HOME" ] ; then
-    die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
-
-Please set the JAVA_HOME variable in your environment to match the
-location of your Java installation."
-fi
-
-# Set JAVA_EXE
-JAVA_EXE="$JAVA_HOME/bin/java"
-
-#
-# For non-cygwin, we need to re-resolve the JAVA_HOME variable to deal with symlinks
-#
-if [ "${cygwin}" = "false" ] ; then
-    if [ -h "$JAVA_EXE" ] ; then
-        while [ -h "$JAVA_EXE" ] ; do
-            ls=`ls -ld "$JAVA_EXE"`
-            link=`expr "$ls" : '.*-> \(.*\)$'`
-            if expr "$link" : '/.*' > /dev/null; then
-                JAVA_EXE="$link"
-            else
-                JAVA_EXE=`dirname "$JAVA_EXE"`"/$link"
-            fi
-        done
-        JAVA_HOME=`dirname \`dirname $JAVA_EXE\ \``
-        JAVA_EXE="$JAVA_HOME/bin/java"
-    fi
-fi
-
-if [ ! -x "$JAVA_EXE" ] ; then
-  die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
-
-Please set the JAVA_HOME variable in your environment to match the
-location of your Java installation."
-fi
-
-# Increase the maximum number of open files
-if [ "${cygwin}" = "false" ] && [ "${darwin}" = "false" ] && [ "${nonstop}" = "false" ] ; then
-    MAX_FD_LIMIT=`ulimit -H -n`
-    if [ $? -eq 0 ] ; then
-        if [ "$MAX_FD" = "maximum" -o "$MAX_FD" = "max" ] ; then
-            # use the system max
-            MAX_FD="$MAX_FD_LIMIT"
-        fi
-        ulimit -n $MAX_FD
-        if [ $? -ne 0 ] ; then
-            warn "Could not set maximum file descriptor limit: $MAX_FD"
-        fi
+    # In Cygwin, the Windows JAVA_HOME is translated to a Cygwin path.
+    if ${cygwin} && [ -n "$ कॉमन फाइल्स" ] && [ -x "/cygdrive/c/Program Files/Java/jdk1.8.0_221/bin/java.exe" ] ; then
+        JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.8.0_221"
     else
-        warn "Could not query maximum file descriptor limit: $MAX_FD_LIMIT"
+        # For other operating systems, there is no good way to find the JAVA_HOME.
+        # We will just assume that 'java' is on the PATH.
+        :
+    fi
+fi
+if [ -n "$JAVA_HOME" ] ; then
+    if [ ! -d "$JAVA_HOME" ] ; then
+        die "JAVA_HOME is not valid: $JAVA_HOME"
+    fi
+    if [ ! -x "$JAVA_HOME/bin/java" ] ; then
+        die "JAVA_HOME is not valid: $JAVA_HOME"
     fi
 fi
 
-# For Darwin, add options to specify how the application appears in the dock
-if ${darwin}; then
-    GRADLE_OPTS="$GRADLE_OPTS \"-Xdock:name=$APP_NAME\" \"-Xdock:icon=$APP_HOME/media/gradle.icns\""
+# Add the '-d64' option if available.
+if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ] && `"$JAVA_HOME/bin/java" -d64 -version > /dev/null 2>&1` ; then
+    DEFAULT_JVM_OPTS="$DEFAULT_JVM_OPTS -d64"
 fi
 
-# For Cygwin, switch paths to Windows format before running java
-if ${cygwin} ; then
-    APP_HOME=`cygpath --path --windows "$APP_HOME"`
-    JAVA_HOME=`cygpath --path --windows "$JAVA_HOME"`
-    CLASSPATH=`cygpath --path --windows "$CLASSPATH"`
-    CYGWIN_OPTS=`cygpath --path --windows "$CYGWIN_OPTS"`
+# Set the GRADLE_HOME.
+GRADLE_HOME="$APP_HOME/gradle"
+if [ ! -f "$GRADLE_HOME/lib/gradle-launcher.jar" ] ; then
+    # We are probably running from the distribution directory.
+    GRADLE_HOME="$APP_HOME"
 fi
 
-# Split up the JVM options only if the variable is not quoted
-DEFAULT_JVM_OPTS=`echo $DEFAULT_JVM_OPTS | tr "\'" "\""`
-JAVA_OPTS=`echo $JAVA_OPTS | tr "\'" "\""`
-GRADLE_OPTS=`echo $GRADLE_OPTS | tr "\'" "\""`
+# Set the CLASSPATH.
+if [ -n "$CLASSPATH" ] ; then
+    CLASSPATH="$CLASSPATH:$GRADLE_HOME/lib/*"
+else
+    CLASSPATH="$GRADLE_HOME/lib/*"
+fi
 
-# Collect all arguments for the java command, following the shell quoting and substitution rules
-eval set -- "$DEFAULT_JVM_OPTS" "$JAVA_OPTS" "$GRADLE_OPTS" "-Dorg.gradle.appname=$APP_BASE_NAME" -classpath "\"$APP_HOME/gradle/wrapper/gradle-wrapper.jar\"" org.gradle.wrapper.GradleWrapperMain "$@"
+# Set the JVM options.
+if [ -n "$JAVA_OPTS" ] ; then
+    GRADLE_OPTS="$GRADLE_OPTS $JAVA_OPTS"
+fi
+if [ -n "$DEFAULT_JVM_OPTS" ] ; then
+    GRADLE_OPTS="$GRADLE_OPTS $DEFAULT_JVM_OPTS"
+fi
 
-# Pass all arguments to the java command
-exec "$JAVA_EXE" "$@"
+# Execute the application.
+exec "$JAVA_HOME/bin/java" ${GRADLE_OPTS} -cp "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
