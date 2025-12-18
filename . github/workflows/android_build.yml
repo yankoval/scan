@@ -2,9 +2,9 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main" ,"feat/android-cicd-setup"]
+    branches: [ "main" ,"feat/scanner-improvements"]
   pull_request:
-    branches: [ "main" ,"feat/android-cicd-setup"]
+    branches: [ "main" ,"feat/scanner-improvements"]
 
 jobs:
   build:
