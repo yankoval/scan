@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ,"feat/android-cicd-setup"]
   pull_request:
     branches: [ "main" ]
 
