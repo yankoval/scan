@@ -106,7 +106,7 @@ gradle-app.setting
 *.class
 
 # Package files
-*.jar
+#*.jar
 *.war
 *.ear
 
