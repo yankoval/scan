@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [ "main" ,"feat/scanner-improvements"]
+    branches: [ "main" ,"feat/scanner-improvements","fix/gradle-wrapper-issue-5805217437026451173"]
   pull_request:
     branches: [ "main" ]
 
