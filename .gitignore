@@ -127,9 +127,8 @@ gradle-app.setting
 
 # Gradle files
 .gradle/
-.gradle/
+#/gradle/
 !/gradle/wrapper/gradle-wrapper.jar
-!gradle/wrapper/gradle-wrapper.properties
 
 # Caching
 .cache/
