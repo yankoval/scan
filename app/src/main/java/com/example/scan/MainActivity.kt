@@ -18,7 +18,7 @@ import com.example.scan.databinding.ActivityMainBinding
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequiredListener {
+class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScannedListener {
 
     private lateinit var viewBinding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
@@ -101,6 +101,12 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnFocusRequire
             val action = FocusMeteringAction.Builder(meteringPoint).build()
             cameraControl?.startFocusAndMetering(action)
             Log.d(TAG, "Auto-focus triggered at translated point: $translatedPoint")
+        }
+    }
+
+    override fun onBarcodeCountUpdated(count: Int) {
+        runOnUiThread {
+            viewBinding.barcodeCountText.text = getString(R.string.barcode_count, count)
         }
     }
 

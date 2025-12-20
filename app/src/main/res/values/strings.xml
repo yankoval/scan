@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">scan</string>
+    <string name="barcode_count">Количество кодов: %1$d</string>
 </resources>

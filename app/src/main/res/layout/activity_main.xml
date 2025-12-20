@@ -21,4 +21,27 @@
         app:layout_constraintRight_toRightOf="@id/preview_view"
         app:layout_constraintTop_toTopOf="@id/preview_view" />
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/info_panel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="#80000000"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.33"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/barcode_count_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Количество кодов: 0" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

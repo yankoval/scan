@@ -21,15 +21,16 @@ import java.util.concurrent.Executors
 class BarcodeScannerProcessor(
     private val graphicOverlay: GraphicOverlay,
     context: Context,
-    private val focusListener: OnFocusRequiredListener
+    private val listener: OnBarcodeScannedListener
 ) {
     private val networkClient = NetworkClient(context)
     private val settingsManager = SettingsManager(context)
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private var isFocusTriggered = false
 
-    interface OnFocusRequiredListener {
+    interface OnBarcodeScannedListener {
         fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int)
+        fun onBarcodeCountUpdated(count: Int)
     }
 
     private val options = BarcodeScannerOptions.Builder()
@@ -55,6 +56,7 @@ class BarcodeScannerProcessor(
 
         scanner.process(inputImage)
             .addOnSuccessListener(executor) { barcodes ->
+                listener.onBarcodeCountUpdated(barcodes.size)
 
                 graphicOverlay.setCameraInfo(image.width, image.height, CameraSelector.LENS_FACING_BACK)
 
@@ -63,7 +65,7 @@ class BarcodeScannerProcessor(
                 if (barcodesWithBounds.isNotEmpty() && !isFocusTriggered) {
                     isFocusTriggered = true
                     val centerPoint = calculateAverageCenter(barcodesWithBounds)
-                    focusListener.onFocusRequired(centerPoint, image.width, image.height)
+                    listener.onFocusRequired(centerPoint, image.width, image.height)
                 } else if (barcodes.isEmpty()) {
                     isFocusTriggered = false
                 }
