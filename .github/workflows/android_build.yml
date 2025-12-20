@@ -1,10 +1,11 @@
 name: Android CI
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ "main" ,"feat/scanner-improvements","fix/gradle-wrapper-issue-5805217437026451173"]
+    branches: [ "**" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "**" ]
 
 jobs:
   build:
@@ -23,11 +24,11 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-      working-directory: ./scan
+      working-directory: scan
 
     - name: Build with Gradle
       run: ./gradlew assembleDebug
-      working-directory: ./scan
+      working-directory: scan
 
     - name: Upload APK as artifact
       uses: actions/upload-artifact@v4
