@@ -86,6 +86,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 )
 
                 this.cameraControl = camera.cameraControl
+                this.cameraControl?.setZoomRatio(1.0f)
                 setupTapToFocus(this.cameraControl!!)
 
             } catch (exc: Exception) {
