@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private lateinit var cameraExecutor: ExecutorService
     private var barcodeScannerProcessor: BarcodeScannerProcessor? = null
     private var cameraControl: CameraControl? = null
+    private lateinit var settingsManager: SettingsManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +35,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         cameraExecutor = Executors.newSingleThreadExecutor()
+        settingsManager = SettingsManager(this)
 
         if (allPermissionsGranted()) {
             viewBinding.previewView.post {
@@ -70,7 +72,11 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 }
             }
 
-            val cameraSelector = getTelephotoCameraSelector(cameraProvider)
+            val cameraSelector = if (settingsManager.getDefaultCamera() == "telephoto") {
+                getTelephotoCameraSelector(cameraProvider)
+            } else {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            }
 
             try {
                 cameraProvider.unbindAll()
