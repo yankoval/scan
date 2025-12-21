@@ -61,7 +61,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
 
-            barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this)
+            val boxStore = (application as MainApplication).boxStore
+            barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this, boxStore)
             imageAnalyzer.also {
                 it.setAnalyzer(cameraExecutor) { imageProxy ->
                     barcodeScannerProcessor?.processImageProxy(imageProxy)
@@ -104,9 +105,9 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         }
     }
 
-    override fun onBarcodeCountUpdated(count: Int) {
+    override fun onBarcodeCountUpdated(totalCount: Long) {
         runOnUiThread {
-            viewBinding.barcodeCountText.text = getString(R.string.barcode_count, count)
+            viewBinding.barcodeCountText.text = getString(R.string.barcode_count, totalCount)
         }
     }
 
