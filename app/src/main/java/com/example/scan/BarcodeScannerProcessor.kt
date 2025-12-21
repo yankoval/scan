@@ -16,9 +16,6 @@ import com.example.scan.model.ScannedCode
 import com.example.scan.model.ScannedCode_
 import io.objectbox.Box
 import io.objectbox.BoxStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
@@ -29,14 +26,12 @@ class BarcodeScannerProcessor(
     boxStore: BoxStore
 ) {
     private val scannedCodeBox: Box<ScannedCode> = boxStore.boxFor(ScannedCode::class.java)
-    private val networkClient = NetworkClient(context)
     private val settingsManager = SettingsManager(context)
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private var isFocusTriggered = false
 
     interface OnBarcodeScannedListener {
         fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int)
-        fun onBarcodeCountUpdated(count: Int)
+        fun onBarcodeCountUpdated(totalCount: Long)
     }
 
     private val options = BarcodeScannerOptions.Builder()
@@ -62,7 +57,7 @@ class BarcodeScannerProcessor(
 
         scanner.process(inputImage)
             .addOnSuccessListener(executor) { barcodes ->
-                listener.onBarcodeCountUpdated(barcodes.size)
+                listener.onBarcodeCountUpdated(scannedCodeBox.count())
 
                 graphicOverlay.setCameraInfo(image.width, image.height, CameraSelector.LENS_FACING_BACK)
 
@@ -77,24 +72,13 @@ class BarcodeScannerProcessor(
                 }
 
                 graphicOverlay.clear()
-                val validCodes = mutableListOf<String>()
                 for (barcode in barcodes) {
                     if (barcode.format == Barcode.FORMAT_QR_CODE && barcode.rawValue?.startsWith("http") == true) {
-                        coroutineScope.launch {
-                            settingsManager.loadSettingsFromQrCode(barcode.rawValue!!)
-                        }
+                        settingsManager.loadSettingsFromQrCode(barcode.rawValue!!)
                         graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, true))
                     } else {
                         val isValid = checkLogic(barcode)
                         graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, isValid))
-                        if (isValid) {
-                            barcode.rawValue?.let { validCodes.add(it) }
-                        }
-                    }
-                }
-                if (validCodes.isNotEmpty()) {
-                    coroutineScope.launch {
-                        networkClient.sendData(validCodes)
                     }
                 }
                 graphicOverlay.postInvalidate()

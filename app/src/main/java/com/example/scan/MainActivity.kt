@@ -105,9 +105,9 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         }
     }
 
-    override fun onBarcodeCountUpdated(count: Int) {
+    override fun onBarcodeCountUpdated(totalCount: Long) {
         runOnUiThread {
-            viewBinding.barcodeCountText.text = getString(R.string.barcode_count, count)
+            viewBinding.barcodeCountText.text = getString(R.string.barcode_count, totalCount)
         }
     }
 
