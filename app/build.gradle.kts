@@ -1,8 +1,10 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("kotlin-kapt")
     id("kotlin-parcelize")
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
+    id("io.objectbox")
 }
 
 android {
@@ -84,4 +86,8 @@ dependencies {
 
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+
+    // ObjectBox
+    implementation("io.objectbox:objectbox-kotlin:3.7.0")
+    kapt("io.objectbox:objectbox-processor:3.7.0")
 }
