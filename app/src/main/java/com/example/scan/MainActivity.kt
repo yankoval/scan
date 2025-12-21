@@ -101,8 +101,9 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         }
 
         val telephotoCameraInfo = backCameras.maxByOrNull { cameraInfo ->
-            val characteristics = Camera2CameraInfo.from(cameraInfo).cameraCharacteristics
-            characteristics[CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS]?.maxOrNull() ?: 0f
+            val camera2Info = Camera2CameraInfo.from(cameraInfo)
+            val focalLengths = camera2Info.getCameraCharacteristic(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+            focalLengths?.maxOrNull() ?: 0f
         }
 
         return if (telephotoCameraInfo != null) {
