@@ -16,6 +16,9 @@ import com.example.scan.model.ScannedCode
 import com.example.scan.model.ScannedCode_
 import io.objectbox.Box
 import io.objectbox.BoxStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
@@ -27,6 +30,7 @@ class BarcodeScannerProcessor(
 ) {
     private val scannedCodeBox: Box<ScannedCode> = boxStore.boxFor(ScannedCode::class.java)
     private val settingsManager = SettingsManager(context)
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private var isFocusTriggered = false
 
     interface OnBarcodeScannedListener {
@@ -74,7 +78,9 @@ class BarcodeScannerProcessor(
                 graphicOverlay.clear()
                 for (barcode in barcodes) {
                     if (barcode.format == Barcode.FORMAT_QR_CODE && barcode.rawValue?.startsWith("http") == true) {
-                        settingsManager.loadSettingsFromQrCode(barcode.rawValue!!)
+                        coroutineScope.launch {
+                            settingsManager.loadSettingsFromQrCode(barcode.rawValue!!)
+                        }
                         graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, true))
                     } else {
                         val isValid = checkLogic(barcode)
