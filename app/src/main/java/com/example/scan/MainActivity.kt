@@ -3,6 +3,7 @@ package com.example.scan
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.PointF
+import android.hardware.camera2.CameraCharacteristics
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
@@ -10,6 +11,7 @@ import android.view.MotionEvent
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
@@ -24,6 +26,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private lateinit var cameraExecutor: ExecutorService
     private var barcodeScannerProcessor: BarcodeScannerProcessor? = null
     private var cameraControl: CameraControl? = null
+    private lateinit var settingsManager: SettingsManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +35,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         cameraExecutor = Executors.newSingleThreadExecutor()
+        settingsManager = SettingsManager(this)
 
         if (allPermissionsGranted()) {
             viewBinding.previewView.post {
@@ -69,7 +73,11 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 }
             }
 
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+            val cameraSelector = if (settingsManager.getDefaultCamera() == "telephoto") {
+                getTelephotoCameraSelector(cameraProvider)
+            } else {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            }
 
             try {
                 cameraProvider.unbindAll()
@@ -79,6 +87,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 )
 
                 this.cameraControl = camera.cameraControl
+                this.cameraControl?.setZoomRatio(1.0f)
                 setupTapToFocus(this.cameraControl!!)
 
             } catch (exc: Exception) {
@@ -86,6 +95,34 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             }
 
         }, ContextCompat.getMainExecutor(this))
+    }
+
+    @androidx.camera.camera2.interop.ExperimentalCamera2Interop
+    private fun getTelephotoCameraSelector(cameraProvider: ProcessCameraProvider): CameraSelector {
+        val backCameras = cameraProvider.availableCameraInfos.filter {
+            val camera2Info = Camera2CameraInfo.from(it)
+            camera2Info.getCameraCharacteristic(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
+        }
+
+        if (backCameras.size <= 1) {
+            return CameraSelector.DEFAULT_BACK_CAMERA
+        }
+
+        val telephotoCameraInfo = backCameras.maxByOrNull { cameraInfo ->
+            val camera2Info = Camera2CameraInfo.from(cameraInfo)
+            val focalLengths = camera2Info.getCameraCharacteristic(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+            focalLengths?.maxOrNull() ?: 0f
+        }
+
+        return if (telephotoCameraInfo != null) {
+            CameraSelector.Builder().addCameraFilter { cameraInfoList ->
+                cameraInfoList.filter {
+                    Camera2CameraInfo.from(it).cameraId == Camera2CameraInfo.from(telephotoCameraInfo).cameraId
+                }
+            }.build()
+        } else {
+            CameraSelector.DEFAULT_BACK_CAMERA
+        }
     }
 
     override fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int) {
