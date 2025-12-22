@@ -18,6 +18,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import com.example.scan.BuildConfig
 import com.example.scan.databinding.ActivityMainBinding
 import com.example.scan.model.ScannedCode
 import io.objectbox.Box
