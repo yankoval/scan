@@ -18,7 +18,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import com.example.scan.BuildConfig
 import com.example.scan.databinding.ActivityMainBinding
 import com.example.scan.model.ScannedCode
 import io.objectbox.Box
@@ -78,7 +77,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             FileOutputStream(file).use {
                 it.write(csvBuilder.toString().toByteArray())
             }
-            val contentUri = FileProvider.getUriForFile(this, "${BuildConfig.APPLICATION_ID}.provider", file)
+            val contentUri = FileProvider.getUriForFile(this, "${applicationContext.packageName}.provider", file)
             val shareIntent = Intent().apply {
                 action = Intent.ACTION_SEND
                 putExtra(Intent.EXTRA_STREAM, contentUri)
