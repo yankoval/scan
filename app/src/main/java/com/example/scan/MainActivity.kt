@@ -73,7 +73,9 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         }
 
         try {
-            val file = File(cacheDir, "scanned_codes.csv")
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val fileName = "scanned_codes_$timeStamp.csv"
+            val file = File(cacheDir, fileName)
             FileOutputStream(file).use {
                 it.write(csvBuilder.toString().toByteArray())
             }
