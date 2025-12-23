@@ -85,6 +85,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             startActivity(Intent.createChooser(shareIntent, "Share CSV"))
+            box.removeAll()
         } catch (e: Exception) {
             Log.e(TAG, "Error sharing CSV", e)
             Toast.makeText(this, "Error sharing CSV", Toast.LENGTH_SHORT).show()
