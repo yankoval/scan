@@ -61,8 +61,9 @@
 
         <TextView
             android:id="@+id/barcode_count_text"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:gravity="center"
             android:textColor="@android:color/white"
             android:textSize="18sp"
             app:layout_constraintBottom_toTopOf="@+id/h_guideline_2"
