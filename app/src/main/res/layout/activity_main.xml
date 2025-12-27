@@ -31,17 +31,56 @@
         app:layout_constraintHeight_percent="0.33"
         app:layout_constraintStart_toStartOf="parent">
 
-        <TextView
-            android:id="@+id/barcode_count_text"
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/h_guideline_1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.191" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/h_guideline_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.809" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/v_guideline_1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.191" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/v_guideline_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.809" />
+
+        <TextView
+            android:id="@+id/barcode_count_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
             android:textColor="@android:color/white"
             android:textSize="18sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/h_guideline_2"
+            app:layout_constraintEnd_toStartOf="@+id/v_guideline_2"
+            app:layout_constraintStart_toStartOf="@+id/v_guideline_1"
+            app:layout_constraintTop_toTopOf="@+id/h_guideline_1"
             tools:text="Количество кодов: 0" />
+
+        <Button
+            android:id="@+id/share_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Share"
+            app:layout_constraintBottom_toTopOf="@+id/h_guideline_2"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/v_guideline_2"
+            app:layout_constraintTop_toTopOf="@+id/h_guideline_1" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -11,4 +11,5 @@ data class ScannedCode(
     @Index val codeType: String = "",
     @Index val contentType: String = "",
     val gs1Data: List<String> = emptyList()
+    val timestamp: Long = System.currentTimeMillis()
 )
