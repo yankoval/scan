@@ -87,9 +87,6 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 
-    // GS1 Parser
-    implementation("com.s24:gs1:1.0.3")
-
     // ObjectBox
     implementation("io.objectbox:objectbox-kotlin:3.7.0")
     kapt("io.objectbox:objectbox-processor:3.7.0")

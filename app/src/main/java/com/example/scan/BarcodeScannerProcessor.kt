@@ -14,13 +14,11 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import com.example.scan.model.ScannedCode
 import com.example.scan.model.ScannedCode_
-import com.s24.gs1.parser.Gs1Parser
 import io.objectbox.Box
 import io.objectbox.BoxStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.net.URL
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
@@ -44,8 +42,7 @@ class BarcodeScannerProcessor(
         .setBarcodeFormats(
             Barcode.FORMAT_DATA_MATRIX,
             Barcode.FORMAT_CODE_128, // SSCC is a subset of Code 128
-            Barcode.FORMAT_QR_CODE,
-            Barcode.FORMAT_EAN_13
+            Barcode.FORMAT_QR_CODE
         )
         .build()
 
@@ -114,51 +111,13 @@ class BarcodeScannerProcessor(
 
     private fun checkLogic(barcode: Barcode): Boolean {
         val code = barcode.rawValue ?: return false
-
-        // Prevent duplicates
-        if (scannedCodeBox.query(ScannedCode_.code.equal(code)).build().findFirst() != null) {
-            return false
+        val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(code)).build().findFirst()
+        return if (existingCode == null) {
+            scannedCodeBox.put(ScannedCode(code = code))
+            true
+        } else {
+            false
         }
-
-        val codeType = when (barcode.format) {
-            Barcode.FORMAT_DATA_MATRIX -> "DataMatrix"
-            Barcode.FORMAT_QR_CODE -> "QRCode"
-            Barcode.FORMAT_CODE_128 -> "Code128"
-            Barcode.FORMAT_EAN_13 -> "EAN-13"
-            else -> "Unknown"
-        }
-
-        var contentType: String
-        val gs1Data = mutableListOf<String>()
-
-        try {
-            val parser = Gs1Parser()
-            val parsedData = parser.parse(code)
-            contentType = "GS1"
-            for ((key, value) in parsedData.entries) {
-                gs1Data.add("${key}:${value}")
-            }
-        } catch (e: Exception) {
-            // GS1 parsing failed. This could be because it's not a GS1 code,
-            // or it's malformed. Given the library's limitations, we fall back
-            // to checking for other types.
-            try {
-                URL(code)
-                contentType = "URL"
-            } catch (urlException: Exception) {
-                contentType = "TEXT"
-            }
-        }
-
-        scannedCodeBox.put(
-            ScannedCode(
-                code = code,
-                codeType = codeType,
-                contentType = contentType,
-                gs1Data = gs1Data
-            )
-        )
-        return true // Always valid in this compromised logic
     }
 
     private class BarcodeGraphic(
