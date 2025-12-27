@@ -16,10 +16,7 @@ import com.example.scan.model.ScannedCode
 import com.example.scan.model.ScannedCode_
 import io.objectbox.Box
 import io.objectbox.BoxStore
-import se.t_mattsson.gs1.GS1Exception
-import se.t_mattsson.gs1.elementstring.ElementStrings
 import kotlinx.coroutines.CoroutineScope
-import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
@@ -114,59 +111,13 @@ class BarcodeScannerProcessor(
 
     private fun checkLogic(barcode: Barcode): Boolean {
         val code = barcode.rawValue ?: return false
-
-        if (scannedCodeBox.query(ScannedCode_.code.equal(code)).build().findFirst() != null) {
-            return false
+        val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(code)).build().findFirst()
+        return if (existingCode == null) {
+            scannedCodeBox.put(ScannedCode(code = code))
+            true
+        } else {
+            false
         }
-
-        val codeType = when (barcode.format) {
-            Barcode.FORMAT_DATA_MATRIX -> "DataMatrix"
-            Barcode.FORMAT_QR_CODE -> "QRCode"
-            Barcode.FORMAT_CODE_128 -> "Code128"
-            Barcode.FORMAT_EAN_13 -> "EAN-13"
-            else -> "Unknown"
-        }
-
-        var contentType: String
-        val gs1Data = mutableListOf<String>()
-        var isValid = true
-
-        try {
-            val result = ElementStrings.parse(code)
-            if (result.isPartial) {
-                // The library indicates a parsing error (e.g., malformed data)
-                throw GS1Exception("Partial parse: " + result.errorMessage)
-            }
-            contentType = "GS1"
-            result.elements.forEach { element ->
-                gs1Data.add("${element.ai}:${element.data}")
-            }
-        } catch (e: GS1Exception) {
-            // GS1 parsing failed.
-            Log.w("BarcodeScanner", "GS1 parsing failed for code '$code': ${e.message}")
-
-            // Now, check if it's a standard URL as a fallback.
-            try {
-                URL(code)
-                contentType = "URL"
-                // It's a valid URL, so it's a valid scan, just not GS1.
-            } catch (urlException: Exception) {
-                // If it's not a valid URL either, we mark it as a generic text code.
-                // In this case, we consider the scan invalid because the initial parsing failed.
-                contentType = "TEXT_ERROR"
-                isValid = false
-            }
-        }
-
-        scannedCodeBox.put(
-            ScannedCode(
-                code = code,
-                codeType = codeType,
-                contentType = contentType,
-                gs1Data = gs1Data
-            )
-        )
-        return isValid
     }
 
     private class BarcodeGraphic(
