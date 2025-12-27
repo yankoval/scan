@@ -10,7 +10,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://jitpack.io' } // <-- Добавьте эту строку
+        maven { url = uri("https://jitpack.io") }// <-- добавление источников из GitHub
     }
 }
 
