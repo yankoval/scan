@@ -11,6 +11,7 @@ import android.util.Size
 import android.view.MotionEvent
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.camera2.interop.Camera2CameraInfo
 import androidx.camera.core.*
@@ -21,6 +22,8 @@ import androidx.core.content.FileProvider
 import com.example.scan.databinding.ActivityMainBinding
 import com.example.scan.model.ScannedCode
 import io.objectbox.Box
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -57,8 +60,22 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         }
 
         viewBinding.shareButton.setOnClickListener {
-            exportCodesToCsv()
+            showExportDialog()
         }
+    }
+
+    private fun showExportDialog() {
+        val options = arrayOf(getString(R.string.export_csv), getString(R.string.export_json))
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.export_dialog_title))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> exportCodesToCsv()
+                    1 -> exportCodesToJson()
+                }
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
     }
 
     private fun exportCodesToCsv() {
@@ -71,26 +88,39 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             val formattedDate = sdf.format(Date(scannedCode.timestamp))
             csvBuilder.append("\"${scannedCode.code}\",\"$formattedDate\"\n")
         }
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "scanned_codes_$timeStamp.csv"
+        shareFile(csvBuilder.toString(), fileName, "text/csv", getString(R.string.share_csv_title))
+        box.removeAll()
+    }
 
+    private fun exportCodesToJson() {
+        val box: Box<ScannedCode> = (application as MainApplication).boxStore.boxFor(ScannedCode::class.java)
+        val codes = box.all
+        val jsonString = Json.encodeToString(codes)
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "scanned_codes_$timeStamp.json"
+        shareFile(jsonString, fileName, "application/json", getString(R.string.share_json_title))
+        box.removeAll()
+    }
+
+    private fun shareFile(content: String, fileName: String, mimeType: String, chooserTitle: String) {
         try {
-            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val fileName = "scanned_codes_$timeStamp.csv"
             val file = File(cacheDir, fileName)
             FileOutputStream(file).use {
-                it.write(csvBuilder.toString().toByteArray())
+                it.write(content.toByteArray())
             }
             val contentUri = FileProvider.getUriForFile(this, "${applicationContext.packageName}.provider", file)
             val shareIntent = Intent().apply {
                 action = Intent.ACTION_SEND
                 putExtra(Intent.EXTRA_STREAM, contentUri)
-                type = "text/csv"
+                type = mimeType
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            startActivity(Intent.createChooser(shareIntent, "Share CSV"))
-            box.removeAll()
+            startActivity(Intent.createChooser(shareIntent, chooserTitle))
         } catch (e: Exception) {
-            Log.e(TAG, "Error sharing CSV", e)
-            Toast.makeText(this, "Error sharing CSV", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Error sharing file", e)
+            Toast.makeText(this, "Error sharing file", Toast.LENGTH_SHORT).show()
         }
     }
 
