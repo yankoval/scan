@@ -6,5 +6,6 @@ import io.objectbox.annotation.Id
 @Entity
 data class ScannedCode(
     @Id var id: Long = 0,
-    val code: String
+    val code: String,
+    val timestamp: Long = System.currentTimeMillis()
 )
