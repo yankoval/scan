@@ -46,4 +46,16 @@ class GS1ParserTest {
         val code = "99ABC123"
         parser.parse(code, "DataMatrix")
     }
+
+    @Test
+    fun `test valid chestny znak datamatrix code`() {
+        val code = "\u001d0104610117656289215,IN\"j\u001d934P4Z"
+        val expected = mapOf(
+            "01" to "04610117656289",
+            "21" to "5,IN\"j",
+            "93" to "4P4Z"
+        )
+        val result = parser.parse(code, "DataMatrix")
+        assertEquals(expected, result)
+    }
 }
