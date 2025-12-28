@@ -9,6 +9,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.isSuccess
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.IOException
 
@@ -31,7 +32,7 @@ class SettingsManager(private val context: Context) {
     }
 
     private fun saveSettings(settings: Settings) {
-        val serialDevicesJson = json.encodeToString(settings.serialDevices)
+        val serialDevicesJson = json.encodeToString(ListSerializer(SerialDevice.serializer()), settings.serialDevices)
         sharedPreferences.edit()
             .putString(KEY_SERVICE_URL, settings.serviceUrl)
             .putString(KEY_DEFAULT_CAMERA, settings.default_camera)

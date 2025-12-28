@@ -13,7 +13,7 @@ import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import java.io.IOException
 import java.util.concurrent.Executors
- 
+
 class SerialScannerManager(
     private val context: Context,
     private val settings: List<SerialDevice>,
