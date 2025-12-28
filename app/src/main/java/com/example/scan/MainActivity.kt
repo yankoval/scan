@@ -5,7 +5,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.PointF
 import android.hardware.camera2.CameraCharacteristics
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
@@ -21,11 +26,17 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.scan.databinding.ActivityMainBinding
 import com.example.scan.model.ScannedCode
+import android.view.View
+import com.example.scan.model.Task
+import com.example.scan.model.TaskEntity
 import io.objectbox.Box
-import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import java.io.BufferedReader
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,6 +50,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private var barcodeScannerProcessor: BarcodeScannerProcessor? = null
     private var cameraControl: CameraControl? = null
     private lateinit var settingsManager: SettingsManager
+    private var currentTask: Task? = null
+    private lateinit var taskBox: Box<TaskEntity>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +61,9 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
         cameraExecutor = Executors.newSingleThreadExecutor()
         settingsManager = SettingsManager(this)
+        taskBox = (application as MainApplication).boxStore.boxFor(TaskEntity::class.java)
+
+        loadTask()
 
         if (allPermissionsGranted()) {
             viewBinding.previewView.post {
@@ -62,6 +78,145 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         viewBinding.shareButton.setOnClickListener {
             showExportDialog()
         }
+
+        viewBinding.closeTaskButton.setOnClickListener {
+            showCloseTaskDialog()
+        }
+
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            intent.data?.let { uri ->
+                try {
+                    val jsonContent = readTextFromUri(uri)
+                    processJsonContent(jsonContent)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing file URI", e)
+                    Toast.makeText(this, "Error processing file", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun readTextFromUri(uri: Uri): String {
+        val stringBuilder = StringBuilder()
+        contentResolver.openInputStream(uri)?.use { inputStream ->
+            BufferedReader(InputStreamReader(inputStream)).use { reader ->
+                var line: String? = reader.readLine()
+                while (line != null) {
+                    stringBuilder.append(line)
+                    line = reader.readLine()
+                }
+            }
+        }
+        return stringBuilder.toString()
+    }
+    private fun loadTask() {
+        val taskEntity = taskBox.get(1) // Always get the task with ID 1
+        if (taskEntity != null) {
+            try {
+                currentTask = Json.decodeFromString<Task>(taskEntity.json)
+                updateUiForTaskMode()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse stored task JSON", e)
+                // Handle corrupted data, maybe delete the invalid entry
+                taskBox.remove(1)
+                currentTask = null
+            }
+        } else {
+            currentTask = null
+        }
+    }
+
+
+    private fun processJsonContent(jsonContent: String) {
+        var isFileProcessed = false
+        // First, try to parse as a Task file, as it's more specific
+        try {
+            val task = Json.decodeFromString<Task>(jsonContent)
+            currentTask = task
+            val taskEntity = TaskEntity(json = jsonContent)
+            taskBox.put(taskEntity) // This will overwrite the existing task with ID 1
+            Toast.makeText(this, "Task loaded: ${task.id}", Toast.LENGTH_SHORT).show()
+            showSuccessFeedback()
+            isFileProcessed = true
+        } catch (e: Exception) {
+            // It's not a task file, or it's invalid. Silently ignore and try parsing as settings.
+            Log.d(TAG, "Not a valid Task JSON: ${e.message}")
+        }
+
+        // If not processed as a task, try to parse as a settings file
+        if (!isFileProcessed) {
+            try {
+                // A simple check for a key field before attempting full deserialization
+                if (jsonContent.contains("serviceUrl")) {
+                    settingsManager.updateSettingsFromJson(jsonContent)
+                    Toast.makeText(this, "Settings updated", Toast.LENGTH_SHORT).show()
+                    showSuccessFeedback()
+                    isFileProcessed = true
+                }
+            } catch (e: Exception) {
+                // Not a settings file either.
+                Log.d(TAG, "Not a valid Settings JSON: ${e.message}")
+            }
+        }
+
+        // If the file was not processed at all, show an error
+        if (!isFileProcessed) {
+            Log.e(TAG, "Failed to parse JSON content as Task or Settings")
+            Toast.makeText(this, "Invalid file format", Toast.LENGTH_SHORT).show()
+        }
+
+        // Always update the UI at the end
+        updateUiForTaskMode()
+    }
+
+    private fun showSuccessFeedback() {
+        // Show green border
+        viewBinding.successFeedbackBorder.visibility = View.VISIBLE
+        Handler(Looper.getMainLooper()).postDelayed({
+            viewBinding.successFeedbackBorder.visibility = View.GONE
+        }, 1000)
+
+        // Play sound
+        try {
+            val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+            toneGen.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200) // Using a similar tone to A
+            toneGen.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to play success tone", e)
+        }
+    }
+
+    private fun updateUiForTaskMode() {
+        val inTaskMode = currentTask != null
+        viewBinding.taskModeIndicator.visibility = if (inTaskMode) View.VISIBLE else View.GONE
+        viewBinding.closeTaskButton.visibility = if (inTaskMode) View.VISIBLE else View.GONE
+    }
+
+    private fun showCloseTaskDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Close Task")
+            .setMessage("Are you sure you want to close the current task? All task data will be deleted.")
+            .setPositiveButton("Close") { _, _ ->
+                closeTask()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun closeTask() {
+        taskBox.remove(1)
+        currentTask = null
+        Toast.makeText(this, "Task closed", Toast.LENGTH_SHORT).show()
+        updateUiForTaskMode()
     }
 
     private fun showExportDialog() {

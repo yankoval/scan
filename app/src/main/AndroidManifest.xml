@@ -25,6 +25,21 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <intent-filter tools:ignore="AppLinkUrlError">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- Handles content URIs with JSON MIME type -->
+                <data android:scheme="content" android:mimeType="application/json" />
+                <!-- Handles content URIs with .json extension -->
+                <data android:scheme="content" android:pathPattern=".*\\.json" />
+                <!-- Handles file URIs with .json extension (most common) -->
+                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.json" />
+                <!-- Handles file URIs with JSON MIME type (less common but good to have) -->
+                <data android:scheme="file" android:mimeType="application/json" />
+            </intent-filter>
         </activity>
 
         <provider
