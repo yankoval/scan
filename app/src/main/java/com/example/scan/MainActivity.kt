@@ -32,13 +32,14 @@ import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScannedListener {
+class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScannedListener, SerialScannerManager.OnSerialScanListener {
 
     private lateinit var viewBinding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
     private var barcodeScannerProcessor: BarcodeScannerProcessor? = null
     private var cameraControl: CameraControl? = null
     private lateinit var settingsManager: SettingsManager
+    private var serialScannerManager: SerialScannerManager? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +49,12 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
         cameraExecutor = Executors.newSingleThreadExecutor()
         settingsManager = SettingsManager(this)
+
+        val serialDevices = settingsManager.getSerialDevices()
+        if (serialDevices.isNotEmpty()) {
+            serialScannerManager = SerialScannerManager(this, serialDevices, this)
+            serialScannerManager?.start()
+        }
 
         if (allPermissionsGranted()) {
             viewBinding.previewView.post {
@@ -268,6 +275,23 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+        serialScannerManager?.stop()
+    }
+
+    override fun onSerialCodeScanned(code: String) {
+        runOnUiThread {
+            barcodeScannerProcessor?.processScannedCode(code, "Serial")
+        }
+    }
+
+    override fun onSerialError(hasError: Boolean) {
+        runOnUiThread {
+            viewBinding.serialErrorText.visibility = if (hasError) {
+                android.view.View.VISIBLE
+            } else {
+                android.view.View.GONE
+            }
+        }
     }
 
     companion object {
