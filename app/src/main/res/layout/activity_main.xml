@@ -43,6 +43,44 @@
         app:layout_constraintHeight_percent="0.33"
         app:layout_constraintStart_toStartOf="parent">
 
+        <LinearLayout
+            android:id="@+id/task_info_layout"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/h_guideline_1"
+            app:layout_constraintStart_toStartOf="@+id/v_guideline_1"
+            app:layout_constraintEnd_toEndOf="@+id/v_guideline_2"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/gtin_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                tools:text="GTIN: 01234567890123" />
+
+            <TextView
+                android:id="@+id/lot_no_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                tools:text="Lot: TST001" />
+
+            <TextView
+                android:id="@+id/exp_date_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                tools:text="Exp: 281223" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/task_mode_indicator"
             android:layout_width="wrap_content"

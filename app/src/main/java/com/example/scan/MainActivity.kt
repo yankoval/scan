@@ -201,6 +201,15 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         val inTaskMode = currentTask != null
         viewBinding.taskModeIndicator.visibility = if (inTaskMode) View.VISIBLE else View.GONE
         viewBinding.closeTaskButton.visibility = if (inTaskMode) View.VISIBLE else View.GONE
+        viewBinding.taskInfoLayout.visibility = if (inTaskMode) View.VISIBLE else View.GONE
+
+        if (inTaskMode) {
+            currentTask?.let {
+                viewBinding.gtinText.text = "GTIN: ${it.gtin ?: "N/A"}"
+                viewBinding.lotNoText.text = "Lot: ${it.lotNo ?: "N/A"}"
+                viewBinding.expDateText.text = "Exp: ${it.expDate ?: "N/A"}"
+            }
+        }
     }
 
     private fun showCloseTaskDialog() {
