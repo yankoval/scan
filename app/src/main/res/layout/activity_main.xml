@@ -157,6 +157,20 @@
             app:layout_constraintStart_toStartOf="@+id/v_guideline_1"
             app:layout_constraintTop_toBottomOf="@+id/barcode_count_text"
             tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/aggregate_count_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/v_guideline_2"
+            app:layout_constraintStart_toStartOf="@+id/v_guideline_1"
+            app:layout_constraintTop_toBottomOf="@+id/close_task_button"
+            tools:text="Aggregates: 5"
+            tools:visibility="visible" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -29,6 +29,8 @@ import com.example.scan.model.ScannedCode
 import android.view.View
 import com.example.scan.model.Task
 import com.example.scan.model.TaskEntity
+import com.example.scan.task.AggregationTaskProcessor
+import com.example.scan.task.ITaskProcessor
 import io.objectbox.Box
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -53,6 +55,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private var currentTask: Task? = null
     private lateinit var taskBox: Box<TaskEntity>
     private val json = Json { ignoreUnknownKeys = true }
+    var taskProcessor: ITaskProcessor? = null
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -120,19 +124,21 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         return stringBuilder.toString()
     }
     private fun loadTask() {
-        val taskEntity = taskBox.get(TASK_ENTITY_ID) // Always get the task with ID 1
+        val taskEntity = taskBox.get(TASK_ENTITY_ID)
         if (taskEntity != null) {
             try {
                 currentTask = json.decodeFromString<Task>(taskEntity.json)
+                taskProcessor = AggregationTaskProcessor((application as MainApplication).boxStore)
                 updateUiForTaskMode()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse stored task JSON", e)
-                // Handle corrupted data, maybe delete the invalid entry
                 taskBox.remove(TASK_ENTITY_ID)
                 currentTask = null
+                taskProcessor = null
             }
         } else {
             currentTask = null
+            taskProcessor = null
         }
     }
 
@@ -150,6 +156,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             }
 
             currentTask = task
+            taskProcessor = AggregationTaskProcessor((application as MainApplication).boxStore)
             val taskEntity = TaskEntity(json = jsonContent)
             taskBox.put(taskEntity) // This will overwrite the existing task with ID 1
             Toast.makeText(this, "Task loaded: ${task.id}", Toast.LENGTH_SHORT).show()
@@ -215,6 +222,18 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 viewBinding.lotNoText.text = "Lot: ${it.lotNo ?: "N/A"}"
                 viewBinding.expDateText.text = "Exp: ${it.expDate ?: "N/A"}"
             }
+            updateAggregateCount()
+            viewBinding.aggregateCountText.visibility = View.VISIBLE
+        } else {
+            viewBinding.aggregateCountText.visibility = View.GONE
+        }
+    }
+
+    fun updateAggregateCount() {
+        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor()
+        val count = aggregatePackageBox.count()
+        runOnUiThread {
+            viewBinding.aggregateCountText.text = "Aggregates: $count"
         }
     }
 
@@ -232,6 +251,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private fun closeTask() {
         taskBox.remove(TASK_ENTITY_ID)
         currentTask = null
+        taskProcessor = null
         Toast.makeText(this, "Task closed", Toast.LENGTH_SHORT).show()
         updateUiForTaskMode()
     }
@@ -314,7 +334,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 .build()
 
             val boxStore = (application as MainApplication).boxStore
-            barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this, boxStore)
+            barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this, boxStore, this)
             imageAnalyzer.also {
                 it.setAnalyzer(cameraExecutor) { imageProxy ->
                     barcodeScannerProcessor?.processImageProxy(imageProxy)
