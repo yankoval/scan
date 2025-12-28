@@ -142,6 +142,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         // First, try to parse as a Task file, as it's more specific
         try {
             val task = json.decodeFromString<Task>(jsonContent)
+            Log.d(TAG, "Parsed task: $task")
             currentTask = task
             val taskEntity = TaskEntity(json = jsonContent)
             taskBox.put(taskEntity) // This will overwrite the existing task with ID 1
