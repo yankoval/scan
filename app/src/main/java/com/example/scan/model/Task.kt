@@ -1,5 +1,6 @@
 package com.example.scan.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -12,6 +13,7 @@ data class Task(
     val lotNo: String,
     val expDate: String,
     val addProdInfo: String,
+    @SerialName("numРacksInBox")
     val numPacksInBox: Int,
     val numLayersInBox: Int,
     val maxNoRead: Int,

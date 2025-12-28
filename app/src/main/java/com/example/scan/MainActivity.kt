@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         return stringBuilder.toString()
     }
     private fun loadTask() {
-        val taskEntity = taskBox.get(1) // Always get the task with ID 1
+        val taskEntity = taskBox.get(TASK_ENTITY_ID) // Always get the task with ID 1
         if (taskEntity != null) {
             try {
                 currentTask = Json.decodeFromString<Task>(taskEntity.json)
@@ -127,7 +127,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse stored task JSON", e)
                 // Handle corrupted data, maybe delete the invalid entry
-                taskBox.remove(1)
+                taskBox.remove(TASK_ENTITY_ID)
                 currentTask = null
             }
         } else {
@@ -213,7 +213,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     private fun closeTask() {
-        taskBox.remove(1)
+        taskBox.remove(TASK_ENTITY_ID)
         currentTask = null
         Toast.makeText(this, "Task closed", Toast.LENGTH_SHORT).show()
         updateUiForTaskMode()
@@ -428,6 +428,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     companion object {
         private const val TAG = "CameraX-MLKit"
         private const val REQUEST_CODE_PERMISSIONS = 10
+        private const val TASK_ENTITY_ID = 1L
         private val REQUIRED_PERMISSIONS =
             mutableListOf(
                 Manifest.permission.CAMERA
