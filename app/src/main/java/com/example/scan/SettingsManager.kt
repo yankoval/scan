@@ -9,6 +9,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.isSuccess
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.IOException
 
@@ -26,10 +27,16 @@ class SettingsManager(private val context: Context) {
         return sharedPreferences.getString(KEY_DEFAULT_CAMERA, null) ?: loadSettingsFromAssets().default_camera
     }
 
+    fun getSerialDevices(): List<SerialDevice> {
+        return loadSettingsFromAssets().serialDevices
+    }
+
     private fun saveSettings(settings: Settings) {
+        val serialDevicesJson = json.encodeToString(ListSerializer(SerialDevice.serializer()), settings.serialDevices)
         sharedPreferences.edit()
             .putString(KEY_SERVICE_URL, settings.serviceUrl)
             .putString(KEY_DEFAULT_CAMERA, settings.default_camera)
+            .putString(KEY_SERIAL_DEVICES, serialDevicesJson)
             .apply()
     }
 
@@ -62,9 +69,25 @@ class SettingsManager(private val context: Context) {
     companion object {
         private const val KEY_SERVICE_URL = "service_url"
         private const val KEY_DEFAULT_CAMERA = "default_camera"
+        private const val KEY_SERIAL_DEVICES = "serial_devices"
         private const val TAG = "SettingsManager"
     }
 }
 
 @Serializable
-private data class Settings(val serviceUrl: String, val default_camera: String)
+data class SerialDevice(
+    val vendorId: Int,
+    val productId: Int,
+    val baudRate: Int,
+    val dataBits: Int,
+    val stopBits: Int,
+    val parity: String,
+    val terminator: String
+)
+
+@Serializable
+private data class Settings(
+    val serviceUrl: String,
+    val default_camera: String,
+    val serialDevices: List<SerialDevice> = emptyList()
+)

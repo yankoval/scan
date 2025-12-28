@@ -90,4 +90,7 @@ dependencies {
     // ObjectBox
     implementation("io.objectbox:objectbox-kotlin:3.7.0")
     kapt("io.objectbox:objectbox-processor:3.7.0")
+
+    // USB Serial
+    implementation("com.github.mik3y:usb-serial-for-android:3.7.0")
 }

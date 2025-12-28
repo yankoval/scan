@@ -113,11 +113,6 @@ class BarcodeScannerProcessor(
 
     private fun checkLogic(barcode: Barcode): Boolean {
         val code = barcode.rawValue ?: return false
-
-        if (scannedCodeBox.query(ScannedCode_.code.equal(code)).build().findFirst() != null) {
-            return false
-        }
-
         val codeType = when (barcode.format) {
             Barcode.FORMAT_DATA_MATRIX -> "DataMatrix"
             Barcode.FORMAT_QR_CODE -> "QRCode"
@@ -126,55 +121,49 @@ class BarcodeScannerProcessor(
             else -> "Unknown"
         }
 
-        var contentType: String
+        processScannedCode(code, codeType)
+
+        // The isValid logic is now implicitly handled by the parser,
+        // but for the graphic overlay, we need a simple check.
+        // For now, let's assume any non-GS1 error code is "valid" for display purposes.
+        val parser = GS1Parser()
+        return try {
+            parser.parse(code, codeType)
+            true
+        } catch (e: GS1Parser.GS1ParseException) {
+            // It's not a valid GS1 code, but it's still a valid scan.
+            // We can refine this logic if needed.
+            true
+        }
+    }
+
+    fun processScannedCode(code: String, codeType: String) {
+        if (scannedCodeBox.query(ScannedCode_.code.equal(code)).build().findFirst() != null) {
+            return // Code already exists
+        }
+
+        var contentType = "TEXT"
         val gs1Data = mutableListOf<String>()
-        var isValid = true
         val parser = GS1Parser()
 
-        // First, check if the code format is potentially GS1-compliant.
-        // EAN-13 is always GS1. DataMatrix and Code128 are GS1 if they have specific prefixes.
-        val isPotentiallyGs1 = when (codeType) {
-            "EAN-13" -> true
-            "DataMatrix" -> code.contains("\u001D")
-            "Code128" -> code.startsWith("]C1")
-            else -> false
+        try {
+            val parsedData = parser.parse(code, codeType)
+            contentType = "GS1"
+            parsedData.forEach { (key, value) ->
+                gs1Data.add("$key:$value")
+            }
+        } catch (e: Exception) {
+            // Not a GS1 code, treat as text
         }
 
-        if (isPotentiallyGs1) {
-            try {
-                // Pass both code and its format to the parser.
-                val parsedData = parser.parse(code, codeType)
-                contentType = "GS1"
-                parsedData.forEach { (key, value) ->
-                    gs1Data.add("$key:$value")
-                }
-            } catch (e: GS1Parser.GS1ParseException) {
-                // This block now catches genuine GS1 parsing errors (e.g., malformed data),
-                // not format identification failures.
-                Log.w("BarcodeScanner", "GS1 parsing failed for code '$code': ${e.message}")
-                contentType = "GS1_ERROR" // A more descriptive error type
-                isValid = false
-            }
-        } else {
-            // If not a GS1 code, check for other types like URL or plain text.
-            try {
-                URL(code)
-                contentType = "URL"
-            } catch (urlException: Exception) {
-                contentType = "TEXT" // It's just plain text, not necessarily an error.
-                isValid = true // Text is a valid content type.
-            }
-        }
-
-        scannedCodeBox.put(
-            ScannedCode(
-                code = code,
-                codeType = codeType,
-                contentType = contentType,
-                gs1Data = gs1Data
-            )
+        val scannedCode = ScannedCode(
+            code = code,
+            codeType = codeType,
+            contentType = contentType,
+            gs1Data = gs1Data
         )
-        return isValid
+        scannedCodeBox.put(scannedCode)
+        listener.onBarcodeCountUpdated(scannedCodeBox.count())
     }
 
     private class BarcodeGraphic(
