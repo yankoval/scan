@@ -33,6 +33,16 @@ class SettingsManager(private val context: Context) {
             .apply()
     }
 
+    fun updateSettingsFromJson(jsonString: String) {
+        try {
+            val settings = json.decodeFromString<Settings>(jsonString)
+            saveSettings(settings)
+            Log.d(TAG, "Settings updated successfully from JSON string")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing settings from JSON string", e)
+        }
+    }
+
     suspend fun loadSettingsFromQrCode(url: String) {
         try {
             val response: HttpResponse = httpClient.get(url)
