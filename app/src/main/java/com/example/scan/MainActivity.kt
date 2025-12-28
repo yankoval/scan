@@ -143,6 +143,12 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         try {
             val task = json.decodeFromString<Task>(jsonContent)
             Log.d(TAG, "Parsed task: $task")
+
+            if (currentTask != null) {
+                Toast.makeText(this, "Another task is already active. Close it first.", Toast.LENGTH_LONG).show()
+                return // Reject the new task
+            }
+
             currentTask = task
             val taskEntity = TaskEntity(json = jsonContent)
             taskBox.put(taskEntity) // This will overwrite the existing task with ID 1
