@@ -52,6 +52,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private lateinit var settingsManager: SettingsManager
     private var currentTask: Task? = null
     private lateinit var taskBox: Box<TaskEntity>
+    private val json = Json { ignoreUnknownKeys = true }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -122,7 +123,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         val taskEntity = taskBox.get(TASK_ENTITY_ID) // Always get the task with ID 1
         if (taskEntity != null) {
             try {
-                currentTask = Json.decodeFromString<Task>(taskEntity.json)
+                currentTask = json.decodeFromString<Task>(taskEntity.json)
                 updateUiForTaskMode()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse stored task JSON", e)
@@ -140,7 +141,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         var isFileProcessed = false
         // First, try to parse as a Task file, as it's more specific
         try {
-            val task = Json.decodeFromString<Task>(jsonContent)
+            val task = json.decodeFromString<Task>(jsonContent)
             currentTask = task
             val taskEntity = TaskEntity(json = jsonContent)
             taskBox.put(taskEntity) // This will overwrite the existing task with ID 1
