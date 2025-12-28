@@ -131,21 +131,38 @@ class BarcodeScannerProcessor(
         var isValid = true
         val parser = GS1Parser()
 
-        try {
-            val parsedData = parser.parse(code)
-            contentType = "GS1"
-            parsedData.forEach { (key, value) ->
-                gs1Data.add("$key:$value")
-            }
-        } catch (e: GS1Parser.GS1ParseException) {
-            Log.w("BarcodeScanner", "GS1 parsing failed for code '$code': ${e.message}")
+        // First, check if the code format is potentially GS1-compliant.
+        // EAN-13 is always GS1. DataMatrix and Code128 are GS1 if they have specific prefixes.
+        val isPotentiallyGs1 = when (codeType) {
+            "EAN-13" -> true
+            "DataMatrix" -> code.contains("\u001D")
+            "Code128" -> code.startsWith("]C1")
+            else -> false
+        }
 
+        if (isPotentiallyGs1) {
+            try {
+                // Pass both code and its format to the parser.
+                val parsedData = parser.parse(code, codeType)
+                contentType = "GS1"
+                parsedData.forEach { (key, value) ->
+                    gs1Data.add("$key:$value")
+                }
+            } catch (e: GS1Parser.GS1ParseException) {
+                // This block now catches genuine GS1 parsing errors (e.g., malformed data),
+                // not format identification failures.
+                Log.w("BarcodeScanner", "GS1 parsing failed for code '$code': ${e.message}")
+                contentType = "GS1_ERROR" // A more descriptive error type
+                isValid = false
+            }
+        } else {
+            // If not a GS1 code, check for other types like URL or plain text.
             try {
                 URL(code)
                 contentType = "URL"
             } catch (urlException: Exception) {
-                contentType = "TEXT_ERROR"
-                isValid = false
+                contentType = "TEXT" // It's just plain text, not necessarily an error.
+                isValid = true // Text is a valid content type.
             }
         }
 
