@@ -11,6 +11,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import io.objectbox.Box
 import com.example.scan.model.ScannedCode
+import com.example.scan.model.ScannedCode_
 import io.objectbox.BoxStore
 
 class BarcodeScannerProcessor(
