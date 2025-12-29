@@ -1,9 +1,8 @@
 package com.example.scan
 
-import android.content.Context
 import timber.log.Timber
 
-class GS1Parser(private val context: Context) {
+class GS1Parser {
     private val aiDefinitions = mapOf(
         "00" to "SSCC",
         "01" to "GTIN",

@@ -1,3 +1,4 @@
+// Force clean build 2024-05-23
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")

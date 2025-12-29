@@ -33,7 +33,7 @@ class BarcodeScannerProcessor(
         .build()
 
     private val scanner: BarcodeScanner = BarcodeScanning.getClient(options)
-    private val gs1Parser = GS1Parser(context)
+    private val gs1Parser = GS1Parser()
 
     fun processImageProxy(imageProxy: ImageProxy, currentTask: com.example.scan.model.Task?) {
         val mediaImage = imageProxy.image

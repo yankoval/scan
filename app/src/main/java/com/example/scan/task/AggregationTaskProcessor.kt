@@ -36,7 +36,7 @@ class AggregationTaskProcessor(boxStore: BoxStore) : ITaskProcessor {
         }
 
         // 4. Check if the number of product codes matches numPacksInBox
-        val numPacksInBox = task.numPacksInBox ?: 0
+        val numPacksInBox = task.numPacksInBox
         if (productCodes.distinctBy { it.code }.size != numPacksInBox) {
             Log.d("AggregationCheck", "Failed: Code count (${productCodes.distinctBy { it.code }.size}) does not match numPacksInBox ($numPacksInBox).")
             return false

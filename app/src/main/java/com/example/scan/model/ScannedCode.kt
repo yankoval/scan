@@ -15,6 +15,6 @@ data class ScannedCode(
     var codeType: String = "",
     @Index
     var contentType: String = "",
-    var gs1Data: List<String> = mutableListOf(),
+    var gs1Data: MutableList<String> = mutableListOf(),
     var timestamp: Long = 0
 )
