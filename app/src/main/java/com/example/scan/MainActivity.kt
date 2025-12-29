@@ -27,6 +27,7 @@ import androidx.core.content.FileProvider
 import com.example.scan.databinding.ActivityMainBinding
 import com.example.scan.model.ScannedCode
 import android.view.View
+import com.example.scan.model.AggregatePackage
 import com.example.scan.model.Task
 import com.example.scan.model.TaskEntity
 import com.example.scan.task.AggregationTaskProcessor
@@ -230,7 +231,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     fun updateAggregateCount() {
-        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor()
+        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
         val count = aggregatePackageBox.count()
         runOnUiThread {
             viewBinding.aggregateCountText.text = "Aggregates: $count"

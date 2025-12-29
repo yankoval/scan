@@ -11,7 +11,6 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import io.objectbox.Box
 import com.example.scan.model.ScannedCode
-import com.example.scan.task.AggregationTaskProcessor
 import io.objectbox.BoxStore
 
 class BarcodeScannerProcessor(
@@ -59,7 +58,6 @@ class BarcodeScannerProcessor(
         }
     }
     private fun handleBarcodes(barcodes: List<Barcode>) {
-        val scannedCodesForCheck = mutableListOf<ScannedCode>()
         graphicOverlay.clear()
         for (barcode in barcodes) {
             val rawValue = barcode.rawValue
@@ -71,7 +69,6 @@ class BarcodeScannerProcessor(
                     scannedCode.contentType = contentType
                     scannedCode.gs1Data = gs1Data
                     scannedCodeBox.put(scannedCode)
-                    scannedCodesForCheck.add(scannedCode)
                     Log.d("BarcodeScanner", "Scanned code: $rawValue, Type: $contentType")
                 }
             }
