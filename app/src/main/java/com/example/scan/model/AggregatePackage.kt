@@ -9,7 +9,7 @@ import io.objectbox.relation.ToMany
 @Entity
 data class AggregatePackage(
     @Id var id: Long = 0,
-    @Index var sscc: String? = null
+    @Index var sscc: String = ""
 ) {
     @Backlink(to = "aggregatePackage")
     lateinit var codes: ToMany<AggregatedCode>
