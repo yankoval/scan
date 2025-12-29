@@ -26,6 +26,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.scan.databinding.ActivityMainBinding
 import com.example.scan.model.ScannedCode
+import com.example.scan.model.ScannedCodeDto
 import android.view.View
 import com.example.scan.model.AggregatePackage
 import com.example.scan.model.Task
@@ -290,7 +291,17 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private fun exportCodesToJson() {
         val box: Box<ScannedCode> = (application as MainApplication).boxStore.boxFor(ScannedCode::class.java)
         val codes = box.all
-        val jsonString = Json.encodeToString(codes)
+        val codesDto = codes.map {
+            ScannedCodeDto(
+                id = it.id,
+                code = it.code,
+                codeType = it.codeType,
+                contentType = it.contentType,
+                gs1Data = it.gs1Data,
+                timestamp = it.timestamp
+            )
+        }
+        val jsonString = Json.encodeToString(codesDto)
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val fileName = "scanned_codes_$timeStamp.json"
         shareFile(jsonString, fileName, "application/json", getString(R.string.share_json_title))

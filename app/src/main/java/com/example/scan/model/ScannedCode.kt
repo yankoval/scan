@@ -3,10 +3,8 @@ package com.example.scan.model
 import io.objectbox.annotation.Entity
 import io.objectbox.annotation.Id
 import io.objectbox.annotation.Index
-import kotlinx.serialization.Serializable
 
 @Entity
-@Serializable
 data class ScannedCode(
     @Id
     var id: Long = 0,
