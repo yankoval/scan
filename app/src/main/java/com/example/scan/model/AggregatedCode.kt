@@ -8,9 +8,9 @@ import io.objectbox.relation.ToOne
 @Entity
 data class AggregatedCode(
     @Id var id: Long = 0,
-    @Index val fullCode: String, // To check for overall uniqueness
-    val gtin: String,
-    val serialNumber: String
+    @Index var fullCode: String = "",
+    var gtin: String = "",
+    var serialNumber: String = ""
 ) {
     lateinit var aggregatePackage: ToOne<AggregatePackage>
 }
