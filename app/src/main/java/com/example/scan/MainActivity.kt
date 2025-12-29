@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private var barcodeScannerProcessor: BarcodeScannerProcessor? = null
     private var cameraControl: CameraControl? = null
     private lateinit var settingsManager: SettingsManager
-    private var currentTask: Task? = null
+    internal var currentTask: Task? = null
     private lateinit var taskBox: Box<TaskEntity>
     private val json = Json { ignoreUnknownKeys = true }
     var taskProcessor: ITaskProcessor? = null

@@ -64,8 +64,8 @@ class BarcodeScannerProcessor(
             if (rawValue != null) {
                 val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
                 if (existingCode == null) {
-                    val scannedCode = ScannedCode(code = rawValue, timestamp = System.currentTimeMillis())
-                    val (contentType, gs1Data) = checkLogic(rawValue)
+                    var scannedCode = ScannedCode(code = rawValue, timestamp = System.currentTimeMillis())
+                    var (contentType, gs1Data) = checkLogic(rawValue)
                     scannedCode.contentType = contentType
                     scannedCode.gs1Data = gs1Data
                     scannedCodeBox.put(scannedCode)
