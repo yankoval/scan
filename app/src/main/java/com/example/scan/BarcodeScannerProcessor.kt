@@ -35,7 +35,7 @@ class BarcodeScannerProcessor(
     private val scanner: BarcodeScanner = BarcodeScanning.getClient(options)
     private val gs1Parser = GS1Parser(context)
 
-    fun processImageProxy(imageProxy: ImageProxy) {
+    fun processImageProxy(imageProxy: ImageProxy, currentTask: com.example.scan.model.Task?) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
             val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
@@ -45,7 +45,7 @@ class BarcodeScannerProcessor(
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastSuccessfulScanTime > 100) {
                             lastSuccessfulScanTime = currentTime
-                            handleBarcodes(barcodes)
+                            handleBarcodes(barcodes, currentTask)
                         }
                     }
                 }
@@ -57,17 +57,20 @@ class BarcodeScannerProcessor(
                 }
         }
     }
-    private fun handleBarcodes(barcodes: List<Barcode>) {
+    private fun handleBarcodes(barcodes: List<Barcode>, currentTask: com.example.scan.model.Task?) {
         graphicOverlay.clear()
         for (barcode in barcodes) {
             val rawValue = barcode.rawValue
             if (rawValue != null) {
                 val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
                 if (existingCode == null) {
-                    var scannedCode = ScannedCode(code = rawValue, timestamp = System.currentTimeMillis())
-                    var (contentType, gs1Data) = checkLogic(rawValue)
-                    scannedCode.contentType = contentType
-                    scannedCode.gs1Data = gs1Data
+                    val (contentType, gs1Data) = checkLogic(rawValue)
+                    val scannedCode = ScannedCode(
+                        code = rawValue,
+                        timestamp = System.currentTimeMillis(),
+                        contentType = contentType,
+                        gs1Data = gs1Data
+                    )
                     scannedCodeBox.put(scannedCode)
                     Log.d("BarcodeScanner", "Scanned code: $rawValue, Type: $contentType")
                 }
@@ -76,7 +79,7 @@ class BarcodeScannerProcessor(
         }
 
         mainActivity.taskProcessor?.let { processor ->
-            mainActivity.currentTask?.let { task ->
+            currentTask?.let { task ->
                 val allCodes = scannedCodeBox.all
                 if (processor.check(allCodes, task)) {
                     Log.d("BarcodeScanner", "Task check successful!")
