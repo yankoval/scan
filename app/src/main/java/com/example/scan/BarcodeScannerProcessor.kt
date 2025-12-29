@@ -103,22 +103,22 @@ class BarcodeScannerProcessor(
         }
     }
 
-    private fun checkLogic(code: String): Pair<String, List<String>> {
+    private fun checkLogic(code: String): Pair<String, MutableList<String>> {
         return when {
             code.startsWith("]C1") || code.contains("\\u001d") -> {
                 val parsedData = gs1Parser.parse(code)
                 if (parsedData.isNotEmpty()) {
-                    Pair("GS1_DATAMATRIX", parsedData.map { "${it.key}:${it.value}" })
+                    Pair("GS1_DATAMATRIX", parsedData.map { "${it.key}:${it.value}" }.toMutableList())
                 } else {
-                    Pair("GS1_ERROR", emptyList())
+                    Pair("GS1_ERROR", mutableListOf())
                 }
             }
             code.length == 13 && code.all { it.isDigit() } -> { // EAN-13
                 val parsedData = gs1Parser.parse(code)
-                Pair("GS1_EAN13", parsedData.map { "${it.key}:${it.value}" })
+                Pair("GS1_EAN13", parsedData.map { "${it.key}:${it.value}" }.toMutableList())
             }
-            gs1Parser.isSSCC(code) -> Pair("GS1_SSCC", listOf("00:${code}"))
-            else -> Pair("TEXT", emptyList())
+            gs1Parser.isSSCC(code) -> Pair("GS1_SSCC", mutableListOf("00:${code}"))
+            else -> Pair("TEXT", mutableListOf())
         }
     }
 
