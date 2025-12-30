@@ -69,6 +69,7 @@ class BarcodeScannerProcessor(
                     val scannedCode = ScannedCode(
                         code = rawValue,
                         timestamp = System.currentTimeMillis(),
+                        codeType = getBarcodeFormatName(barcode.format),
                         contentType = contentType,
                         gs1Data = gs1Data
                     )
@@ -109,7 +110,12 @@ class BarcodeScannerProcessor(
             code.startsWith("]C1") || code.contains('\u001d') -> {
                 val parsedData = gs1Parser.parse(code)
                 if (parsedData.isNotEmpty()) {
-                    Pair("GS1_DATAMATRIX", parsedData.map { "${it.key}:${it.value}" }.toMutableList())
+                    // Check if the content is exclusively an SSCC
+                    if (parsedData.size == 1 && parsedData.containsKey("00")) {
+                        Pair("GS1_SSCC", parsedData.map { "${it.key}:${it.value}" }.toMutableList())
+                    } else {
+                        Pair("GS1_DATAMATRIX", parsedData.map { "${it.key}:${it.value}" }.toMutableList())
+                    }
                 } else {
                     Pair("GS1_ERROR", mutableListOf())
                 }
@@ -121,6 +127,25 @@ class BarcodeScannerProcessor(
             gs1Parser.isSSCC(code) -> Pair("GS1_SSCC", mutableListOf("00:$code"))
             code.startsWith("00") && code.length == 20 && code.all { it.isDigit() } -> Pair("GS1_SSCC", mutableListOf("00:${code.substring(2)}"))
             else -> Pair("TEXT", mutableListOf())
+        }
+    }
+
+    private fun getBarcodeFormatName(format: Int): String {
+        return when (format) {
+            Barcode.FORMAT_CODE_128 -> "Code 128"
+            Barcode.FORMAT_CODE_39 -> "Code 39"
+            Barcode.FORMAT_CODE_93 -> "Code 93"
+            Barcode.FORMAT_CODABAR -> "Codabar"
+            Barcode.FORMAT_DATA_MATRIX -> "Data Matrix"
+            Barcode.FORMAT_EAN_13 -> "EAN-13"
+            Barcode.FORMAT_EAN_8 -> "EAN-8"
+            Barcode.FORMAT_ITF -> "ITF"
+            Barcode.FORMAT_QR_CODE -> "QR Code"
+            Barcode.FORMAT_UPC_A -> "UPC-A"
+            Barcode.FORMAT_UPC_E -> "UPC-E"
+            Barcode.FORMAT_PDF417 -> "PDF417"
+            Barcode.FORMAT_AZTEC -> "Aztec"
+            else -> "Unknown"
         }
     }
 
