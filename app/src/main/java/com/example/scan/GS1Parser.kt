@@ -17,7 +17,7 @@ class GS1Parser {
 
     fun parse(data: String): Map<String, String> {
         val result = mutableMapOf<String, String>()
-        var remainingData = data.replace("]C1", "").replace("\u001d", "")
+        var remainingData = data.removePrefix("]C1")
 
         // Handle EAN-13 as a special case for GTIN
         if (remainingData.length == 13 && remainingData.all { it.isDigit() }) {
@@ -51,8 +51,8 @@ class GS1Parser {
     private fun extractAiData(data: String, ai: String): Triple<String, String, String> {
         val variableLengthAis = mapOf(
             "10" to 20, // up to 20 chars
-            "21" to 20,  // up to 20 chars
-            "93" to -1 // FNC1 terminated, simplified here
+            "21" to 20,
+            "93" to 30 // Max length for crypto hash
         )
         val fixedLengthAis = mapOf(
             "00" to 18,
@@ -62,8 +62,8 @@ class GS1Parser {
             "17" to 6
         )
 
-        var value = ""
-        var rest = ""
+        var value: String
+        var rest: String
 
         if (fixedLengthAis.containsKey(ai)) {
             val len = fixedLengthAis[ai]!!
@@ -71,10 +71,29 @@ class GS1Parser {
             rest = data.substring(ai.length + len)
         } else if (variableLengthAis.containsKey(ai)) {
             val maxLength = variableLengthAis[ai]!!
-            val fnc1Index = data.indexOf('\u001d', ai.length)
-            val endIndex = if (fnc1Index != -1) fnc1Index else (ai.length + maxLength).coerceAtMost(data.length)
-            value = data.substring(ai.length, endIndex)
-            rest = if (fnc1Index != -1) data.substring(endIndex + 1) else data.substring(endIndex)
+            // FNC1 separator is at the start of the next AI group, not part of this one's data
+            val dataWithoutCurrentAi = data.substring(ai.length)
+            val fnc1Index = dataWithoutCurrentAi.indexOf('\u001d')
+
+            val endIndex = if (fnc1Index != -1) {
+                fnc1Index
+            } else {
+                // If no FNC1, take up to maxLength or end of string
+                dataWithoutCurrentAi.length
+            }.coerceAtMost(maxLength)
+
+            value = dataWithoutCurrentAi.substring(0, endIndex)
+            val consumedLength = ai.length + value.length
+            rest = if (fnc1Index != -1) {
+                // The rest of the data starts after the value, and includes the separator for the next parser loop
+                data.substring(consumedLength)
+            } else {
+                data.substring(consumedLength)
+            }
+        } else {
+            // Should not happen if called correctly
+            value = ""
+            rest = data
         }
         return Triple(ai, value, rest)
     }

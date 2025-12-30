@@ -118,7 +118,8 @@ class BarcodeScannerProcessor(
                 val parsedData = gs1Parser.parse(code)
                 Pair("GS1_EAN13", parsedData.map { "${it.key}:${it.value}" }.toMutableList())
             }
-            gs1Parser.isSSCC(code) -> Pair("GS1_SSCC", mutableListOf("00:${code}"))
+            gs1Parser.isSSCC(code) -> Pair("GS1_SSCC", mutableListOf("00:$code"))
+            code.startsWith("00") && code.length == 20 && code.all { it.isDigit() } -> Pair("GS1_SSCC", mutableListOf("00:${code.substring(2)}"))
             else -> Pair("TEXT", mutableListOf())
         }
     }
