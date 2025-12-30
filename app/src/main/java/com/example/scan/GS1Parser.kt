@@ -17,7 +17,7 @@ class GS1Parser {
 
     fun parse(data: String): Map<String, String> {
         val result = mutableMapOf<String, String>()
-        var remainingData = data.removePrefix("]C1")
+        var remainingData = data.removePrefix("]C1").removePrefix("\u001d")
 
         // Handle EAN-13 as a special case for GTIN
         if (remainingData.length == 13 && remainingData.all { it.isDigit() }) {
@@ -89,6 +89,11 @@ class GS1Parser {
                 data.substring(consumedLength)
             } else {
                 data.substring(consumedLength)
+            }
+
+            // After parsing a variable-length field, if the rest of the data starts with FNC1, strip it.
+            if (rest.startsWith('\u001d')) {
+                rest = rest.substring(1)
             }
         } else {
             // Should not happen if called correctly
