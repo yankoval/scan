@@ -106,7 +106,7 @@ class BarcodeScannerProcessor(
 
     private fun checkLogic(code: String): Pair<String, MutableList<String>> {
         return when {
-            code.startsWith("]C1") || code.contains("\\u001d") -> {
+            code.startsWith("]C1") || code.contains('\u001d') -> {
                 val parsedData = gs1Parser.parse(code)
                 if (parsedData.isNotEmpty()) {
                     Pair("GS1_DATAMATRIX", parsedData.map { "${it.key}:${it.value}" }.toMutableList())
