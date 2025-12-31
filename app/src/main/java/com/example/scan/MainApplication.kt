@@ -1,6 +1,7 @@
 package com.example.scan
 
 import android.app.Application
+import com.example.scan.BuildConfig
 import com.example.scan.model.MyObjectBox
 import io.objectbox.BoxStore
 import timber.log.Timber
