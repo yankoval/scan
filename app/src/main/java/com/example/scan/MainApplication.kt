@@ -1,7 +1,6 @@
 package com.example.scan
 
 import android.app.Application
-import com.example.scan.BuildConfig
 import com.example.scan.model.MyObjectBox
 import io.objectbox.BoxStore
 import timber.log.Timber
@@ -13,7 +12,7 @@ class MainApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         boxStore = MyObjectBox.builder().androidContext(this).build()
-        if (BuildConfig.DEBUG) {
+        if (com.example.scan.BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree(), FileLoggingTree(this))
         }
     }
