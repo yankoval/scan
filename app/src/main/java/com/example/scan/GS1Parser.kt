@@ -17,7 +17,10 @@ class GS1Parser {
 
     fun parse(data: String): Map<String, String> {
         val result = mutableMapOf<String, String>()
-        var remainingData = data.removePrefix("]C1").removePrefix("\u001d")
+        // Sanitize the input by dropping any leading non-digit characters,
+        // which can be introduced by some scanners, but preserve FNC1.
+        var remainingData = data.dropWhile { !it.isDigit() && it != '\u001d' }
+            .removePrefix("]C1").removePrefix("\u001d")
 
         // Handle EAN-13 as a special case for GTIN
         if (remainingData.length == 13 && remainingData.all { it.isDigit() }) {
