@@ -157,4 +157,8 @@ class BarcodeScannerProcessor(
         fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int)
         fun onBarcodeCountUpdated(totalCount: Long)
     }
+
+    fun close() {
+        scanner.close()
+    }
 }
