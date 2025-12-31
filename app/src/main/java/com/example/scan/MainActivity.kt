@@ -509,8 +509,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
     override fun onDestroy() {
         super.onDestroy()
-        barcodeScannerProcessor?.close()
-        cameraExecutor.shutdownNow()
+        // Perform cleanup in the background to avoid blocking the main thread.
+        cameraExecutor.execute {
+            barcodeScannerProcessor?.close()
+        }
     }
 
     companion object {
