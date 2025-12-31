@@ -1,10 +1,10 @@
 package com.example.scan.task
 
-import android.util.Log
 import com.example.scan.model.*
 import io.objectbox.Box
 import io.objectbox.BoxStore
 import io.objectbox.kotlin.boxFor
+import timber.log.Timber
 
 class AggregationTaskProcessor(boxStore: BoxStore) : ITaskProcessor {
 
@@ -13,55 +13,57 @@ class AggregationTaskProcessor(boxStore: BoxStore) : ITaskProcessor {
     private val aggregatedCodeBox: Box<AggregatedCode> = boxStore.boxFor()
 
     override fun check(codes: List<ScannedCode>, task: Task): Boolean {
+        Timber.d("Starting aggregation check...")
         // 1. Separate codes into product codes (DataMatrix) and package codes (SSCC)
         val productCodes = codes.filter { it.contentType == "GS1_DATAMATRIX" }
         val packageCodes = codes.filter { it.contentType == "GS1_SSCC" }
 
         // 2. Check for a single SSCC code
         if (packageCodes.size != 1) {
-            Log.d("AggregationCheck", "Failed: Found ${packageCodes.size} SSCC codes, expected 1.")
+            Timber.d("Aggregation failed: Found ${packageCodes.size} SSCC codes, expected 1.")
             return false
         }
         val sscc = packageCodes.first().code
 
         // 3. Check if GTINs match the task
         val taskGtin = task.gtin
-        val mismatchedGtin = productCodes.any { code ->
-            val gtinFromCode = code.gs1Data.firstOrNull { it.startsWith("01") }?.substring(2)
-            gtinFromCode != taskGtin
-        }
-        if (mismatchedGtin) {
-            Log.d("AggregationCheck", "Failed: Mismatched GTIN found.")
-            return false
+        productCodes.forEach { code ->
+            val gtinFromCode = code.gs1Data.firstOrNull { it.startsWith("01:") }?.substring(3)
+            if (gtinFromCode != taskGtin) {
+                Timber.d("Aggregation failed: Mismatched GTIN. Task requires '$taskGtin', but found '$gtinFromCode' in code '${code.code}'.")
+                return false
+            }
         }
 
         // 4. Check if the number of product codes matches numPacksInBox
         val numPacksInBox = task.numPacksInBox
-        if (productCodes.distinctBy { it.code }.size != numPacksInBox) {
-            Log.d("AggregationCheck", "Failed: Code count (${productCodes.distinctBy { it.code }.size}) does not match numPacksInBox ($numPacksInBox).")
+        val distinctProductCodes = productCodes.distinctBy { it.code }
+        if (distinctProductCodes.size != numPacksInBox) {
+            Timber.d("Aggregation failed: Code count mismatch. Task requires $numPacksInBox product codes, but found ${distinctProductCodes.size} distinct codes.")
             return false
         }
 
         // 5. Check for uniqueness in the aggregation database
         val existingPackage = aggregatePackageBox.query(AggregatePackage_.sscc.equal(sscc)).build().findFirst()
         if (existingPackage != null) {
-            Log.d("AggregationCheck", "Failed: SSCC code $sscc already exists.")
+            Timber.d("Aggregation failed: SSCC code '$sscc' already exists in the database.")
             return false
         }
 
-        val allProductCodes = productCodes.map { it.code }
-        val existingCodesCount = aggregatedCodeBox.query(AggregatedCode_.fullCode.`in`(allProductCodes.toTypedArray())).build().count()
-        if (existingCodesCount > 0) {
-            Log.d("AggregationCheck", "Failed: Found $existingCodesCount existing product codes in the database.")
+        val allProductFullCodes = distinctProductCodes.map { it.code }
+        val existingCodes = aggregatedCodeBox.query(AggregatedCode_.fullCode.`in`(allProductFullCodes.toTypedArray())).build().find()
+        if (existingCodes.isNotEmpty()) {
+            val foundCodes = existingCodes.joinToString(", ") { "'${it.fullCode}'" }
+            Timber.d("Aggregation failed: The following product codes already exist in the database: $foundCodes.")
             return false
         }
 
         // All checks passed, proceed with aggregation
-        Log.d("AggregationCheck", "Success: All checks passed. Aggregating package.")
+        Timber.d("Success: All checks passed. Aggregating package with SSCC '$sscc'.")
         val newPackage = AggregatePackage(sscc = sscc)
-        val newAggregatedCodes = productCodes.map {
-            val gtin = it.gs1Data.first { data -> data.startsWith("01") }.substring(2)
-            val serial = it.gs1Data.first { data -> data.startsWith("21") }.substring(2)
+        val newAggregatedCodes = distinctProductCodes.map {
+            val gtin = it.gs1Data.first { data -> data.startsWith("01:") }.substring(3)
+            val serial = it.gs1Data.first { data -> data.startsWith("21:") }.substring(3)
             AggregatedCode(fullCode = it.code, gtin = gtin, serialNumber = serial).apply {
                 this.aggregatePackage.target = newPackage
             }

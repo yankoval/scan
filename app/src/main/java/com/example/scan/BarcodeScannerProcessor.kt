@@ -83,9 +83,12 @@ class BarcodeScannerProcessor(
         mainActivity.taskProcessor?.let { processor ->
             currentTask?.let { task ->
                 val allCodes = scannedCodeBox.all
-                if (processor.check(allCodes, task)) {
-                    Log.d("BarcodeScanner", "Task check successful!")
-                    mainActivity.updateAggregateCount()
+                val expectedCodeCount = (task.numPacksInBox ?: 0) + 1
+                if (allCodes.size >= expectedCodeCount) {
+                    if (processor.check(allCodes, task)) {
+                        Log.d("BarcodeScanner", "Task check successful!")
+                        mainActivity.updateAggregateCount()
+                    }
                 }
             }
         }
