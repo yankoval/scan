@@ -16,6 +16,7 @@ import android.util.Size
 import android.view.MotionEvent
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.camera2.interop.Camera2CameraInfo
@@ -39,6 +40,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import java.io.BufferedReader
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
@@ -59,6 +61,12 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private val json = Json { ignoreUnknownKeys = true }
     var taskProcessor: ITaskProcessor? = null
         private set
+
+    private val createDocumentLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        uri?.let {
+            copyLogFileToUri(it)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,6 +92,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
         viewBinding.shareButton.setOnClickListener {
             showExportDialog()
+        }
+
+        viewBinding.exportLogsButton.setOnClickListener {
+            exportLogs()
         }
 
         viewBinding.closeTaskButton.setOnClickListener {
@@ -325,6 +337,32 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         } catch (e: Exception) {
             Log.e(TAG, "Error sharing file", e)
             Toast.makeText(this, "Error sharing file", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun exportLogs() {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "scan_logs_$timeStamp.txt"
+        createDocumentLauncher.launch(fileName)
+    }
+
+    private fun copyLogFileToUri(uri: Uri) {
+        try {
+            val logFile = File(getExternalFilesDir(null), "logs/app.log")
+            if (!logFile.exists()) {
+                Toast.makeText(this, "Log file not found.", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            contentResolver.openOutputStream(uri)?.use { outputStream ->
+                FileInputStream(logFile).use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            Toast.makeText(this, "Logs exported successfully.", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error exporting logs", e)
+            Toast.makeText(this, "Error exporting logs.", Toast.LENGTH_SHORT).show()
         }
     }
 

@@ -138,6 +138,16 @@
             tools:text="Количество кодов: 0" />
 
         <Button
+            android:id="@+id/export_logs_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Export Logs"
+            app:layout_constraintBottom_toTopOf="@+id/h_guideline_1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
             android:id="@+id/share_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
