@@ -12,8 +12,7 @@ class MainApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         boxStore = MyObjectBox.builder().androidContext(this).build()
-        if (com.example.scan.BuildConfig.DEBUG) {
-            Timber.plant(Timber.DebugTree(), FileLoggingTree(this))
-        }
+        // Always plant trees to get around BuildConfig issues in CI
+        Timber.plant(Timber.DebugTree(), FileLoggingTree(this))
     }
 }
