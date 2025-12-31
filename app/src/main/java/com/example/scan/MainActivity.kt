@@ -244,10 +244,12 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     fun updateAggregateCount() {
-        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
-        val count = aggregatePackageBox.count()
-        runOnUiThread {
-            viewBinding.aggregateCountText.text = "Aggregates: $count"
+        if (!isFinishing && !isDestroyed) {
+            val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
+            val count = aggregatePackageBox.count()
+            runOnUiThread {
+                viewBinding.aggregateCountText.text = "Aggregates: $count"
+            }
         }
     }
 
