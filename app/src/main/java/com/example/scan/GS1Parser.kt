@@ -17,10 +17,12 @@ class GS1Parser {
 
     fun parse(data: String): Map<String, String> {
         val result = mutableMapOf<String, String>()
-        // Sanitize the input by dropping any leading non-digit characters,
-        // which can be introduced by some scanners, but preserve FNC1.
-        var remainingData = data.dropWhile { !it.isDigit() && it != '\u001d' }
-            .removePrefix("]C1").removePrefix("\u001d")
+        // Sanitize the input. First, remove the standard Code 128 GS1 prefix if it exists.
+        var remainingData = data.removePrefix("]C1")
+        // Then, drop any other leading non-digit characters (from other scanner types),
+        // but preserve the FNC1 group separator.
+        remainingData = remainingData.dropWhile { !it.isDigit() && it != '\u001d' }
+            .removePrefix("\u001d")
 
         // Handle EAN-13 as a special case for GTIN
         if (remainingData.length == 13 && remainingData.all { it.isDigit() }) {

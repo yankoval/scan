@@ -117,7 +117,8 @@ class BarcodeScannerProcessor(
                     if (parsedData.size == 1 && parsedData.containsKey("00")) {
                         Pair("GS1_SSCC", parsedData.map { "${it.key}:${it.value}" }.toMutableList())
                     } else {
-                        Pair("GS1_DATAMATRIX", parsedData.map { "${it.key}:${it.value}" }.toMutableList())
+                        val contentType = if (code.contains('\u001d')) "GS1_DATAMATRIX" else "GS1_CODE128"
+                        Pair(contentType, parsedData.map { "${it.key}:${it.value}" }.toMutableList())
                     }
                 } else {
                     Pair("GS1_ERROR", mutableListOf())
