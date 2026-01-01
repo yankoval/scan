@@ -21,6 +21,18 @@
         app:layout_constraintRight_toRightOf="@id/preview_view"
         app:layout_constraintTop_toTopOf="@id/preview_view" />
 
+    <View
+        android:id="@+id/success_feedback_border"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/success_border"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/info_panel"
         android:layout_width="match_parent"
@@ -30,6 +42,59 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHeight_percent="0.33"
         app:layout_constraintStart_toStartOf="parent">
+
+        <LinearLayout
+            android:id="@+id/task_info_layout"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/h_guideline_1"
+            app:layout_constraintStart_toStartOf="@+id/v_guideline_1"
+            app:layout_constraintEnd_toEndOf="@+id/v_guideline_2"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/gtin_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                tools:text="GTIN: 01234567890123" />
+
+            <TextView
+                android:id="@+id/lot_no_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                tools:text="Lot: TST001" />
+
+            <TextView
+                android:id="@+id/exp_date_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                tools:text="Exp: 281223" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/task_mode_indicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="T"
+            android:textColor="@android:color/white"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@+id/h_guideline_2"
+            app:layout_constraintEnd_toStartOf="@+id/v_guideline_1"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/h_guideline_1"
+            tools:visibility="visible" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/h_guideline_1"
@@ -73,6 +138,16 @@
             tools:text="Количество кодов: 0" />
 
         <Button
+            android:id="@+id/export_logs_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Export Logs"
+            app:layout_constraintBottom_toTopOf="@+id/h_guideline_1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
             android:id="@+id/share_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -81,6 +156,31 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="@+id/v_guideline_2"
             app:layout_constraintTop_toTopOf="@+id/h_guideline_1" />
+
+        <Button
+            android:id="@+id/close_task_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Close Task"
+            android:visibility="gone"
+            app:layout_constraintEnd_toStartOf="@+id/v_guideline_2"
+            app:layout_constraintStart_toStartOf="@+id/v_guideline_1"
+            app:layout_constraintTop_toBottomOf="@+id/barcode_count_text"
+            tools:visibility="visible" />
+
+        <TextView
+            android:id="@+id/aggregate_count_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/v_guideline_2"
+            app:layout_constraintStart_toStartOf="@+id/v_guideline_1"
+            app:layout_constraintTop_toBottomOf="@+id/close_task_button"
+            tools:text="Aggregates: 5"
+            tools:visibility="visible" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

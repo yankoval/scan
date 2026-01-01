@@ -1,91 +1,114 @@
 package com.example.scan
 
-class GS1Parser {
+import timber.log.Timber
 
-    // A map of Application Identifiers (AIs) and their lengths.
-    // A length of 0 indicates a variable length field.
-    private val aiLengths = mapOf(
-        "00" to 18, "01" to 14, "02" to 14, "10" to 0, "11" to 6, "13" to 6,
-        "15" to 6, "17" to 6, "21" to 0, "30" to 0, "37" to 0, "93" to 0, "414" to 16
-        // Add more AIs as needed
+class GS1Parser {
+    private val aiDefinitions = mapOf(
+        "00" to "SSCC",
+        "01" to "GTIN",
+        "10" to "Batch/Lot Number",
+        "11" to "Production Date",
+        "15" to "Best Before Date",
+        "17" to "Expiration Date",
+        "21" to "Serial Number",
+        "93" to "Crypto Hash"
+        // ... add other AIs as needed
     )
 
-    // FNC1 separator for variable length fields
-    private val FNC1 = "\u001D"
-
-    class GS1ParseException(message: String) : Exception(message)
-
-    fun parse(code: String, format: String): Map<String, String> {
+    fun parse(data: String): Map<String, String> {
         val result = mutableMapOf<String, String>()
+        // Sanitize the input. First, remove the standard Code 128 GS1 prefix if it exists.
+        var remainingData = data.removePrefix("]C1")
+        // Then, drop any other leading non-digit characters (from other scanner types),
+        // but preserve the FNC1 group separator.
+        remainingData = remainingData.dropWhile { !it.isDigit() && it != '\u001d' }
+            .removePrefix("\u001d")
 
-        // EAN-13 is a special case, as it represents a GTIN (AI 01) directly.
-        if (format == "EAN-13") {
-            if (code.length == 13 && code.all { it.isDigit() }) {
-                result["01"] = code
-                return result
-            } else {
-                throw GS1ParseException("Invalid EAN-13 format: $code")
-            }
+        // Handle EAN-13 as a special case for GTIN
+        if (remainingData.length == 13 && remainingData.all { it.isDigit() }) {
+            result["01"] = remainingData
+            return result
         }
 
-        // Pre-process the code to remove GS1 identifiers before parsing AIs.
-        var remainingCode = when {
-            format == "DataMatrix" && code.startsWith(FNC1) -> code.substring(FNC1.length)
-            format == "Code128" && code.startsWith("]C1") -> code.substring(3)
-            else -> code
-        }
 
-        // If the code is empty after stripping identifiers, there's nothing to parse.
-        if (remainingCode.isEmpty() && result.isEmpty()) {
-            throw GS1ParseException("Code is empty after stripping identifiers.")
-        }
-
-        while (remainingCode.isNotEmpty()) {
-            var ai: String? = null
-            var length: Int? = null
-
-            // Find the matching AI definition
-            for (key in aiLengths.keys) {
-                if (remainingCode.startsWith(key)) {
-                    ai = key
-                    length = aiLengths[key]
-                    break
+        while (remainingData.isNotEmpty()) {
+            var foundAi = false
+            for (aiLength in aiDefinitions.keys.map { it.length }.distinct().sortedDescending()) {
+                if (remainingData.length >= aiLength) {
+                    val potentialAi = remainingData.substring(0, aiLength)
+                    if (aiDefinitions.containsKey(potentialAi)) {
+                        val (ai, value, rest) = extractAiData(remainingData, potentialAi)
+                        result[ai] = value
+                        remainingData = rest
+                        foundAi = true
+                        break
+                    }
                 }
             }
-
-            if (ai == null || length == null) {
-                throw GS1ParseException("Unknown AI or malformed code at the beginning of: $remainingCode")
+            if (!foundAi) {
+                Timber.tag("GS1Parser").w("Unknown AI or parsing error at: %s", remainingData)
+                break
             }
-
-            remainingCode = remainingCode.substring(ai.length)
-
-            val value: String
-            if (length > 0) {
-                // Fixed length AI
-                if (remainingCode.length < length) {
-                    throw GS1ParseException("Insufficient data for AI '$ai'. Expected length $length, got ${remainingCode.length}")
-                }
-                value = remainingCode.substring(0, length)
-                remainingCode = remainingCode.substring(length)
-            } else {
-                // Variable length AI
-                val fnc1Index = remainingCode.indexOf(FNC1)
-                if (fnc1Index != -1) {
-                    value = remainingCode.substring(0, fnc1Index)
-                    remainingCode = remainingCode.substring(fnc1Index + 1)
-                } else {
-                    // If no FNC1, the rest of the string is the value
-                    value = remainingCode
-                    remainingCode = ""
-                }
-            }
-
-            if (result.containsKey(ai)) {
-                throw GS1ParseException("Duplicate AI found: '$ai'")
-            }
-            result[ai] = value
         }
-
         return result
+    }
+
+    private fun extractAiData(data: String, ai: String): Triple<String, String, String> {
+        val variableLengthAis = mapOf(
+            "10" to 20, // up to 20 chars
+            "21" to 20,
+            "93" to 30 // Max length for crypto hash
+        )
+        val fixedLengthAis = mapOf(
+            "00" to 18,
+            "01" to 14,
+            "11" to 6,
+            "15" to 6,
+            "17" to 6
+        )
+
+        var value: String
+        var rest: String
+
+        if (fixedLengthAis.containsKey(ai)) {
+            val len = fixedLengthAis[ai]!!
+            value = data.substring(ai.length, ai.length + len)
+            rest = data.substring(ai.length + len)
+        } else if (variableLengthAis.containsKey(ai)) {
+            val maxLength = variableLengthAis[ai]!!
+            // FNC1 separator is at the start of the next AI group, not part of this one's data
+            val dataWithoutCurrentAi = data.substring(ai.length)
+            val fnc1Index = dataWithoutCurrentAi.indexOf('\u001d')
+
+            val endIndex = if (fnc1Index != -1) {
+                fnc1Index
+            } else {
+                // If no FNC1, take up to maxLength or end of string
+                dataWithoutCurrentAi.length
+            }.coerceAtMost(maxLength)
+
+            value = dataWithoutCurrentAi.substring(0, endIndex)
+            val consumedLength = ai.length + value.length
+            rest = if (fnc1Index != -1) {
+                // The rest of the data starts after the value, and includes the separator for the next parser loop
+                data.substring(consumedLength)
+            } else {
+                data.substring(consumedLength)
+            }
+
+            // After parsing a variable-length field, if the rest of the data starts with FNC1, strip it.
+            if (rest.startsWith('\u001d')) {
+                rest = rest.substring(1)
+            }
+        } else {
+            // Should not happen if called correctly
+            value = ""
+            rest = data
+        }
+        return Triple(ai, value, rest)
+    }
+
+    fun isSSCC(code: String): Boolean {
+        return code.length == 18 && code.all { it.isDigit() }
     }
 }
