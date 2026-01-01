@@ -6,7 +6,7 @@ import io.objectbox.BoxStore
 import io.objectbox.kotlin.boxFor
 import timber.log.Timber
 
-class AggregationTaskProcessor(boxStore: BoxStore) : ITaskProcessor {
+class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor {
 
     private val scannedCodeBox: Box<ScannedCode> = boxStore.boxFor()
     private val aggregatePackageBox: Box<AggregatePackage> = boxStore.boxFor()
@@ -69,10 +69,11 @@ class AggregationTaskProcessor(boxStore: BoxStore) : ITaskProcessor {
             }
         }
 
-        aggregatePackageBox.put(newPackage)
-        aggregatedCodeBox.put(newAggregatedCodes)
-
-        scannedCodeBox.removeAll()
+        boxStore.runInTx {
+            aggregatePackageBox.put(newPackage)
+            aggregatedCodeBox.put(newAggregatedCodes)
+            scannedCodeBox.removeAll()
+        }
 
         return true
     }
