@@ -62,12 +62,12 @@ class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor 
         Timber.d("SSCC uniqueness check passed.")
 
         Timber.d("Checking for product code uniqueness...")
-        val allProductFullCodes = distinctProductCodes.map { it.code }
-        val existingCodes = aggregatedCodeBox.query(AggregatedCode_.fullCode.`in`(allProductFullCodes.toTypedArray())).build().find()
-        if (existingCodes.isNotEmpty()) {
-            val foundCodes = existingCodes.joinToString(", ") { "'${it.fullCode}'" }
-            Timber.w("CHECK FAILED: Product codes already exist: $foundCodes.")
-            return false
+        for (productCode in distinctProductCodes) {
+            val existingCode = aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(productCode.code)).build().findFirst()
+            if (existingCode != null) {
+                Timber.w("CHECK FAILED: Product code '${productCode.code}' already exists in the database.")
+                return false
+            }
         }
         Timber.d("Product code uniqueness check passed.")
 
