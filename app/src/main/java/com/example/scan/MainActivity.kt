@@ -63,9 +63,20 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     var taskProcessor: ITaskProcessor? = null
         private set
 
+    private var isExportingReport = false
+
     private val createDocumentLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         uri?.let {
             copyLogFileToUri(it)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isExportingReport) {
+            isExportingReport = false
+            clearAggregationData()
+            closeTask()
         }
     }
 
@@ -271,15 +282,13 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
     private fun exportAggregationReportAndCloseTask() {
         currentTask?.let { task ->
+            isExportingReport = true
             val reportGenerator = AggregationReportGenerator((application as MainApplication).boxStore)
             val reportJson = reportGenerator.generateReport(task)
             val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
             val fileName = "aggregation_report_${task.id}_$timeStamp.json"
             shareFile(reportJson, fileName, "application/json", "Share Aggregation Report")
-
-            clearAggregationData()
         }
-        closeTask()
     }
 
     private fun clearAggregationData() {
