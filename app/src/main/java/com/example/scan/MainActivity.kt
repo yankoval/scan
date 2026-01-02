@@ -294,8 +294,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
     private fun clearAggregationData() {
         val boxStore = (application as MainApplication).boxStore
-        boxStore.boxFor<AggregatePackage>().removeAll()
-        boxStore.boxFor<AggregatedCode>().removeAll()
+        boxStore.boxFor(AggregatePackage::class.java).removeAll()
+        boxStore.boxFor(AggregatedCode::class.java).removeAll()
         Toast.makeText(this, "Aggregation data cleared", Toast.LENGTH_SHORT).show()
     }
 
