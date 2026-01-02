@@ -59,25 +59,23 @@ class BarcodeScannerProcessor(
         }
     }
     private fun handleBarcodes(barcodes: List<Barcode>, currentTask: com.example.scan.model.Task?) {
-        graphicOverlay.clear()
+        // --- Database and Logic Operations (Background Thread) ---
+        var isTaskSuccessful = false
         for (barcode in barcodes) {
-            val rawValue = barcode.rawValue
-            if (rawValue != null) {
-                val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
-                if (existingCode == null) {
-                    val (contentType, gs1Data) = checkLogic(rawValue)
-                    val scannedCode = ScannedCode(
-                        code = rawValue,
-                        timestamp = System.currentTimeMillis(),
-                        codeType = getBarcodeFormatName(barcode.format),
-                        contentType = contentType,
-                        gs1Data = gs1Data
-                    )
-                    scannedCodeBox.put(scannedCode)
-                    Log.d("BarcodeScanner", "Scanned code: $rawValue, Type: $contentType")
-                }
+            val rawValue = barcode.rawValue ?: continue
+            val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
+            if (existingCode == null) {
+                val (contentType, gs1Data) = checkLogic(rawValue)
+                val scannedCode = ScannedCode(
+                    code = rawValue,
+                    timestamp = System.currentTimeMillis(),
+                    codeType = getBarcodeFormatName(barcode.format),
+                    contentType = contentType,
+                    gs1Data = gs1Data
+                )
+                scannedCodeBox.put(scannedCode)
+                Log.d("BarcodeScanner", "Scanned new code: $rawValue")
             }
-            graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode))
         }
 
         mainActivity.taskProcessor?.let { processor ->
@@ -87,23 +85,37 @@ class BarcodeScannerProcessor(
                 if (allCodes.size >= expectedCodeCount) {
                     if (processor.check(allCodes, task)) {
                         Log.d("BarcodeScanner", "Task check successful!")
-                        mainActivity.updateAggregateCount()
+                        isTaskSuccessful = true
                     }
                 }
             }
         }
 
         val totalCount = scannedCodeBox.count()
-        listener.onBarcodeCountUpdated(totalCount)
 
-        if (barcodes.isNotEmpty()) {
-            val firstBarcode = barcodes.first()
-            val imageWidth = graphicOverlay.width
-            val imageHeight = graphicOverlay.height
-            val boundingBox = firstBarcode.boundingBox
-            if (boundingBox != null) {
-                val center = PointF(boundingBox.centerX().toFloat(), boundingBox.centerY().toFloat())
-                listener.onFocusRequired(center, imageWidth, imageHeight)
+        // --- UI Operations (Main Thread) ---
+        mainActivity.runOnUiThread {
+            graphicOverlay.clear()
+            for (barcode in barcodes) {
+                graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode))
+            }
+
+            if (isTaskSuccessful) {
+                mainActivity.updateAggregateCount()
+                mainActivity.showSuccessFeedback()
+                graphicOverlay.clear() // Clear visuals after successful aggregation
+            }
+
+            listener.onBarcodeCountUpdated(totalCount)
+
+            if (barcodes.isNotEmpty()) {
+                val firstBarcode = barcodes.first()
+                val boundingBox = firstBarcode.boundingBox
+                if (boundingBox != null) {
+                    val center = PointF(boundingBox.centerX().toFloat(), boundingBox.centerY().toFloat())
+                    // Assuming graphicOverlay dimensions are now correct because we are on the main thread
+                    listener.onFocusRequired(center, graphicOverlay.width, graphicOverlay.height)
+                }
             }
         }
     }

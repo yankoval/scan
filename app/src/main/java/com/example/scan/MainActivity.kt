@@ -224,7 +224,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         updateUiForTaskMode()
     }
 
-    private fun showSuccessFeedback() {
+    fun showSuccessFeedback() {
         // Show green border
         viewBinding.successFeedbackBorder.visibility = View.VISIBLE
         Handler(Looper.getMainLooper()).postDelayed({
