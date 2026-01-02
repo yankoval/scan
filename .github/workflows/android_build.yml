@@ -3,7 +3,7 @@ name: Android CI
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ,*]
+    branches: [ "main" ,"feature/json-import-5248790735129622341"]
   pull_request:
     branches: [ "main" ]
 
