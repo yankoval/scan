@@ -30,6 +30,7 @@ import com.example.scan.model.ScannedCode
 import com.example.scan.model.ScannedCodeDto
 import android.view.View
 import com.example.scan.model.AggregatePackage
+import com.example.scan.model.AggregatedCode
 import com.example.scan.model.Task
 import com.example.scan.model.TaskEntity
 import com.example.scan.report.AggregationReportGenerator
