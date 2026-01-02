@@ -3,7 +3,7 @@ name: Android CI
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ,"feat/scanner-improvements", "scanner-autofocus-test"]
+    branches: [ "main" ,*]
   pull_request:
     branches: [ "main" ]
 
