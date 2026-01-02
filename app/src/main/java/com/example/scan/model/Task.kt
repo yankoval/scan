@@ -2,6 +2,7 @@ package com.example.scan.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class Task(
@@ -10,6 +11,7 @@ data class Task(
     val lineNum: String,
     val isGroup: Boolean,
     val gtin: String,
+    @Transient var startTime: Long = 0,
     val lotNo: String,
     val expDate: String,
     val addProdInfo: String,

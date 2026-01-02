@@ -32,6 +32,7 @@ import android.view.View
 import com.example.scan.model.AggregatePackage
 import com.example.scan.model.Task
 import com.example.scan.model.TaskEntity
+import com.example.scan.report.AggregationReportGenerator
 import com.example.scan.task.AggregationTaskProcessor
 import com.example.scan.task.ITaskProcessor
 import io.objectbox.Box
@@ -141,7 +142,9 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         val taskEntity = taskBox.get(TASK_ENTITY_ID)
         if (taskEntity != null) {
             try {
-                currentTask = json.decodeFromString<Task>(taskEntity.json)
+                currentTask = json.decodeFromString<Task>(taskEntity.json).apply {
+                    startTime = System.currentTimeMillis()
+                }
                 taskProcessor = AggregationTaskProcessor((application as MainApplication).boxStore)
                 updateUiForTaskMode()
             } catch (e: Exception) {
@@ -161,7 +164,9 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         var isFileProcessed = false
         // First, try to parse as a Task file, as it's more specific
         try {
-            val task = json.decodeFromString<Task>(jsonContent)
+            val task = json.decodeFromString<Task>(jsonContent).apply {
+                startTime = System.currentTimeMillis()
+            }
             Log.d(TAG, "Parsed task: $task")
 
             if (currentTask != null) {
@@ -256,12 +261,32 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private fun showCloseTaskDialog() {
         AlertDialog.Builder(this)
             .setTitle("Close Task")
-            .setMessage("Are you sure you want to close the current task? All task data will be deleted.")
-            .setPositiveButton("Close") { _, _ ->
-                closeTask()
+            .setMessage("Are you sure you want to close the current task and export the report?")
+            .setPositiveButton("Export and Close") { _, _ ->
+                exportAggregationReportAndCloseTask()
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun exportAggregationReportAndCloseTask() {
+        currentTask?.let { task ->
+            val reportGenerator = AggregationReportGenerator((application as MainApplication).boxStore)
+            val reportJson = reportGenerator.generateReport(task)
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val fileName = "aggregation_report_${task.id}_$timeStamp.json"
+            shareFile(reportJson, fileName, "application/json", "Share Aggregation Report")
+
+            clearAggregationData()
+        }
+        closeTask()
+    }
+
+    private fun clearAggregationData() {
+        val boxStore = (application as MainApplication).boxStore
+        boxStore.boxFor<AggregatePackage>().removeAll()
+        boxStore.boxFor<AggregatedCode>().removeAll()
+        Toast.makeText(this, "Aggregation data cleared", Toast.LENGTH_SHORT).show()
     }
 
     private fun closeTask() {

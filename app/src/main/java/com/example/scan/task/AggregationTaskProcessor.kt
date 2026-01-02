@@ -75,7 +75,7 @@ class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor 
         Timber.d("--- All Checks Passed ---")
         Timber.d("Preparing to aggregate package with SSCC '$sscc'.")
 
-        val newPackage = AggregatePackage(sscc = sscc)
+        val newPackage = AggregatePackage(sscc = sscc, timestamp = System.currentTimeMillis())
         val newAggregatedCodes = distinctProductCodes.map {
             val gtin = it.gs1Data.first { data -> data.startsWith("01:") }.substring(3)
             val serial = it.gs1Data.first { data -> data.startsWith("21:") }.substring(3)
