@@ -2,8 +2,12 @@ package com.example.scan
 
 import android.content.Context
 import android.graphics.PointF
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.camera.core.ImageProxy
+import com.example.scan.model.AggregatedCode
+import com.example.scan.model.AggregatedCode_
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -12,18 +16,20 @@ import com.google.mlkit.vision.common.InputImage
 import io.objectbox.Box
 import com.example.scan.model.ScannedCode
 import com.example.scan.model.ScannedCode_
+import com.example.scan.task.CheckResult
 import io.objectbox.BoxStore
 
 class BarcodeScannerProcessor(
     private val graphicOverlay: GraphicOverlay,
     private val context: Context,
     private val listener: OnBarcodeScannedListener,
-    private val boxStore: BoxStore,
-    private val mainActivity: MainActivity
+    private val boxStore: BoxStore
 ) {
 
     private val scannedCodeBox: Box<ScannedCode> = boxStore.boxFor(ScannedCode::class.java)
+    private val aggregatedCodeBox: Box<AggregatedCode> = boxStore.boxFor(AggregatedCode::class.java)
     private var lastSuccessfulScanTime: Long = 0
+    private var invalidCodes = emptySet<String>()
 
     private val options = BarcodeScannerOptions.Builder()
         .setBarcodeFormats(
@@ -36,6 +42,15 @@ class BarcodeScannerProcessor(
     private val scanner: BarcodeScanner = BarcodeScanning.getClient(options)
     private val gs1Parser = GS1Parser()
 
+    private val inactivityHandler = Handler(Looper.getMainLooper())
+    private val inactivityRunnable = Runnable {
+        if (scannedCodeBox.count() > 0) {
+            Log.d("BarcodeScanner", "Clearing buffer due to inactivity.")
+            scannedCodeBox.removeAll()
+            invalidCodes = emptySet()
+            listener.onBarcodeCountUpdated(0)
+        }
+    }
     fun processImageProxy(imageProxy: ImageProxy, currentTask: com.example.scan.model.Task?) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
@@ -43,11 +58,13 @@ class BarcodeScannerProcessor(
             scanner.process(image)
                 .addOnSuccessListener { barcodes ->
                     if (barcodes.isNotEmpty()) {
+                        inactivityHandler.removeCallbacks(inactivityRunnable)
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastSuccessfulScanTime > 100) {
                             lastSuccessfulScanTime = currentTime
                             handleBarcodes(barcodes, currentTask)
                         }
+                        inactivityHandler.postDelayed(inactivityRunnable, 3000)
                     }
                 }
                 .addOnFailureListener { e ->
@@ -60,11 +77,15 @@ class BarcodeScannerProcessor(
     }
     private fun handleBarcodes(barcodes: List<Barcode>, currentTask: com.example.scan.model.Task?) {
         graphicOverlay.clear()
+        val codesInFrame = mutableSetOf<String>()
+
         for (barcode in barcodes) {
             val rawValue = barcode.rawValue
             if (rawValue != null) {
+                codesInFrame.add(rawValue)
                 val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
-                if (existingCode == null) {
+                val isDuplicate = aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(rawValue)).build().findFirst() != null
+                if (existingCode == null && !isDuplicate) {
                     val (contentType, gs1Data) = checkLogic(rawValue)
                     val scannedCode = ScannedCode(
                         code = rawValue,
@@ -76,22 +97,34 @@ class BarcodeScannerProcessor(
                     scannedCodeBox.put(scannedCode)
                     Log.d("BarcodeScanner", "Scanned code: $rawValue, Type: $contentType")
                 }
+                graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, invalidCodes + if (isDuplicate) setOf(rawValue) else emptySet()))
             }
-            graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode))
         }
+        val codesToRemove = scannedCodeBox.all.filterNot { codesInFrame.contains(it.code) }
+        scannedCodeBox.remove(codesToRemove)
 
-        mainActivity.taskProcessor?.let { processor ->
+        (context as? MainActivity)?.taskProcessor?.let { processor ->
             currentTask?.let { task ->
                 val allCodes = scannedCodeBox.all
                 val expectedCodeCount = (task.numPacksInBox ?: 0) + 1
                 if (allCodes.size >= expectedCodeCount) {
-                    if (processor.check(allCodes, task)) {
-                        Log.d("BarcodeScanner", "Task check successful!")
-                        mainActivity.updateAggregateCount()
+                    when (val result = processor.check(allCodes, task)) {
+                        is CheckResult.Success -> {
+                            Log.d("BarcodeScanner", "Task check successful!")
+                            listener.onCheckSucceeded()
+                            invalidCodes = emptySet()
+                        }
+                        is CheckResult.Failure -> {
+                            Log.w("BarcodeScanner", "Task check failed: ${result.reason}")
+                            listener.onCheckFailed(result.reason)
+                            invalidCodes = result.invalidCodes
+                            scannedCodeBox.removeAll()
+                        }
                     }
                 }
             }
         }
+
 
         val totalCount = scannedCodeBox.count()
         listener.onBarcodeCountUpdated(totalCount)
@@ -156,6 +189,8 @@ class BarcodeScannerProcessor(
     interface OnBarcodeScannedListener {
         fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int)
         fun onBarcodeCountUpdated(totalCount: Long)
+        fun onCheckSucceeded()
+        fun onCheckFailed(reason: String)
     }
 
     fun close() {

@@ -9,7 +9,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 class BarcodeGraphic(
     overlay: GraphicOverlay,
     private val barcode: Barcode,
-    private val invalidCodes: Set<String>
+    var isDuplicate: Boolean = false
 ) : GraphicOverlay.Graphic(overlay) {
 
     private val validPaint = Paint().apply {
@@ -34,10 +34,12 @@ class BarcodeGraphic(
 
     override fun draw(canvas: Canvas) {
         barcode.boundingBox?.let { boundingBox ->
+            // Adjusts the bounding box to match the view scale and orientation.
             val rect = calculateRect(boundingBox)
-            val paint = if (invalidCodes.contains(barcode.rawValue)) invalidPaint else validPaint
+            val paint = if (isDuplicate) invalidPaint else validPaint
             canvas.drawRect(rect, paint)
 
+            // Draws the barcode raw value below the box.
             barcode.rawValue?.let {
                 canvas.drawText(it, rect.left, rect.bottom + 40f, textPaint)
             }

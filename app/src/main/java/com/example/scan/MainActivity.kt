@@ -224,6 +224,25 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         }
     }
 
+    private fun showErrorFeedback() {
+        // Show red border
+        viewBinding.errorFeedbackBorder.visibility = View.VISIBLE
+        Handler(Looper.getMainLooper()).postDelayed({
+            viewBinding.errorFeedbackBorder.visibility = View.GONE
+        }, 1000)
+
+        // Play sound
+        try {
+            // Using a different tone for error, e.g., a short beep
+            val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+            toneGen.startTone(ToneGenerator.TONE_CDMA_SOFT_ERROR_LITE, 500) // Longer tone for G note
+            toneGen.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to play error tone", e)
+        }
+    }
+
+
     private fun updateUiForTaskMode() {
         val inTaskMode = currentTask != null
         viewBinding.taskModeIndicator.visibility = if (inTaskMode) View.VISIBLE else View.GONE
@@ -386,7 +405,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 .build()
 
             val boxStore = (application as MainApplication).boxStore
-            barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this, boxStore, this)
+            barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this, boxStore)
             imageAnalyzer.also {
                 it.setAnalyzer(cameraExecutor) { imageProxy ->
                     barcodeScannerProcessor?.processImageProxy(imageProxy, currentTask)
@@ -467,6 +486,20 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             viewBinding.barcodeCountText.text = getString(R.string.barcode_count, totalCount)
         }
     }
+
+    override fun onCheckSucceeded() {
+        runOnUiThread {
+            updateAggregateCount()
+            showSuccessFeedback()
+        }
+    }
+
+    override fun onCheckFailed(reason: String) {
+        runOnUiThread {
+            showErrorFeedback()
+        }
+    }
+
 
     private fun setupTapToFocus(cameraControl: CameraControl) {
         viewBinding.previewView.setOnTouchListener { _, event ->
