@@ -97,7 +97,8 @@ class BarcodeScannerProcessor(
                     scannedCodeBox.put(scannedCode)
                     Log.d("BarcodeScanner", "Scanned code: $rawValue, Type: $contentType")
                 }
-                graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, invalidCodes + if (isDuplicate) setOf(rawValue) else emptySet()))
+                val isInvalid = invalidCodes.contains(rawValue)
+                graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, isDuplicate || isInvalid))
             }
         }
         val codesToRemove = scannedCodeBox.all.filterNot { codesInFrame.contains(it.code) }
