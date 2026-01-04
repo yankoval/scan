@@ -26,12 +26,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.scan.databinding.ActivityMainBinding
-import com.example.scan.model.ScannedCode
-import com.example.scan.model.ScannedCodeDto
+import com.example.scan.model.*
 import android.view.View
-import com.example.scan.model.AggregatePackage
-import com.example.scan.model.Task
-import com.example.scan.model.TaskEntity
 import com.example.scan.task.AggregationTaskProcessor
 import com.example.scan.task.ITaskProcessor
 import io.objectbox.Box
@@ -48,6 +44,9 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScannedListener {
 
@@ -275,8 +274,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private fun showCloseTaskDialog() {
         AlertDialog.Builder(this)
             .setTitle("Close Task")
-            .setMessage("Are you sure you want to close the current task? All task data will be deleted.")
-            .setPositiveButton("Close") { _, _ ->
+            .setMessage("Are you sure you want to close the current task? This will generate the final report.")
+            .setPositiveButton("Close & Export") { _, _ ->
                 closeTask()
             }
             .setNegativeButton("Cancel", null)
@@ -284,12 +283,62 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     private fun closeTask() {
+        generateAndExportAggregationReport()
+        clearTaskData()
+    }
+
+    private fun clearTaskData() {
+        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor()
+        val aggregatedCodeBox: Box<AggregatedCode> = (application as MainApplication).boxStore.boxFor()
+
+        aggregatePackageBox.removeAll()
+        aggregatedCodeBox.removeAll()
         taskBox.remove(TASK_ENTITY_ID)
+
         currentTask = null
         taskProcessor = null
-        Toast.makeText(this, "Task closed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Task closed and data cleared", Toast.LENGTH_SHORT).show()
         updateUiForTaskMode()
     }
+
+    private fun generateAndExportAggregationReport() {
+        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor()
+        val allPackages = aggregatePackageBox.all
+
+        if (currentTask == null) {
+            Log.e(TAG, "Cannot generate report without an active task.")
+            return
+        }
+
+        val readyBoxes = allPackages.mapIndexed { index, pkg ->
+            val productCodes = pkg.codes.map { it.fullCode }
+            ReadyBox(
+                Number = index,
+                boxNumber = pkg.sscc,
+                boxTime = formatInstant(pkg.timestamp),
+                productNumbersFull = productCodes
+            )
+        }
+
+        val report = AggregationReport(
+            id = currentTask!!.id,
+            startTime = currentTask!!.startTime,
+            endTime = formatInstant(Instant.now().toEpochMilli()),
+            readyBox = readyBoxes
+        )
+
+        val jsonString = Json.encodeToString(report)
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "aggregation_report_$timeStamp.json"
+        shareFile(jsonString, fileName, "application/json", "Export Aggregation Report")
+    }
+
+    private fun formatInstant(timestamp: Long): String {
+        val instant = Instant.ofEpochMilli(timestamp)
+        val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault())
+        return formatter.format(instant)
+    }
+
 
     private fun showExportDialog() {
         val options = arrayOf(getString(R.string.export_csv), getString(R.string.export_json))
