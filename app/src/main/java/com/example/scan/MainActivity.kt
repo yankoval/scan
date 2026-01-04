@@ -302,7 +302,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     private fun generateAndExportAggregationReport() {
-        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor()
+        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
         val allPackages = aggregatePackageBox.all
 
         if (currentTask == null) {
