@@ -24,5 +24,6 @@ data class Task(
     val numPacksInParcel: Int,
     val boxLabelFields: List<BoxLabelField>,
     val productNumbers: List<String>,
-    val boxNumbers: List<String>
+    val boxNumbers: List<String>,
+    val startTime: String = ""
 )

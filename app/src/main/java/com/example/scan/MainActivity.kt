@@ -288,8 +288,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     private fun clearTaskData() {
-        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor()
-        val aggregatedCodeBox: Box<AggregatedCode> = (application as MainApplication).boxStore.boxFor()
+        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
+        val aggregatedCodeBox: Box<AggregatedCode> = (application as MainApplication).boxStore.boxFor(AggregatedCode::class.java)
 
         aggregatePackageBox.removeAll()
         aggregatedCodeBox.removeAll()
