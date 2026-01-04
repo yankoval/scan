@@ -87,24 +87,20 @@ class BarcodeScannerProcessor(
                 val isDuplicate = aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(rawValue)).build().findFirst() != null
                 if (existingCode == null && !isDuplicate) {
                     val (contentType, gs1Data) = checkLogic(rawValue)
-                    if (scannedCodeBox.count() < (currentTask?.numPacksInBox ?: Int.MAX_VALUE) + 1) {
-                        val scannedCode = ScannedCode(
-                            code = rawValue,
-                            timestamp = System.currentTimeMillis(),
-                            codeType = getBarcodeFormatName(barcode.format),
-                            contentType = contentType,
-                            gs1Data = gs1Data
-                        )
-                        scannedCodeBox.put(scannedCode)
-                        Log.d("BarcodeScanner", "Scanned code: $rawValue, Type: $contentType")
-                    }
+                    val scannedCode = ScannedCode(
+                        code = rawValue,
+                        timestamp = System.currentTimeMillis(),
+                        codeType = getBarcodeFormatName(barcode.format),
+                        contentType = contentType,
+                        gs1Data = gs1Data
+                    )
+                    scannedCodeBox.put(scannedCode)
+                    Log.d("BarcodeScanner", "Scanned code: $rawValue, Type: $contentType")
                 }
                 val isInvalid = invalidCodes.contains(rawValue)
                 graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, isDuplicate || isInvalid))
             }
         }
-        val codesToRemove = scannedCodeBox.all.filterNot { codesInFrame.contains(it.code) }
-        scannedCodeBox.remove(codesToRemove)
 
         (context as? MainActivity)?.taskProcessor?.let { processor ->
             currentTask?.let { task ->
