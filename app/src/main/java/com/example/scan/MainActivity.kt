@@ -457,6 +457,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this, boxStore)
             imageAnalyzer.also {
                 it.setAnalyzer(cameraExecutor) { imageProxy ->
+                    viewBinding.graphicOverlay.setCameraInfo(imageProxy.width, imageProxy.height, CameraSelector.LENS_FACING_BACK)
                     barcodeScannerProcessor?.processImageProxy(imageProxy, currentTask)
                 }
             }
