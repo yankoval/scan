@@ -62,7 +62,7 @@ class BarcodeScannerProcessor(
                         val currentTime = System.currentTimeMillis()
                         if (currentTime - lastSuccessfulScanTime > 100) {
                             lastSuccessfulScanTime = currentTime
-                            handleBarcodes(barcodes, currentTask)
+                            handleBarcodes(barcodes, currentTask, imageProxy)
                         }
                         inactivityHandler.postDelayed(inactivityRunnable, 3000)
                     }
@@ -75,7 +75,7 @@ class BarcodeScannerProcessor(
                 }
         }
     }
-    private fun handleBarcodes(barcodes: List<Barcode>, currentTask: com.example.scan.model.Task?) {
+    private fun handleBarcodes(barcodes: List<Barcode>, currentTask: com.example.scan.model.Task?, imageProxy: ImageProxy) {
         graphicOverlay.clear()
         val codesInFrame = mutableSetOf<String>()
 
@@ -131,8 +131,8 @@ class BarcodeScannerProcessor(
 
         if (barcodes.isNotEmpty()) {
             val firstBarcode = barcodes.first()
-            val imageWidth = graphicOverlay.width
-            val imageHeight = graphicOverlay.height
+            val imageWidth = imageProxy.width
+            val imageHeight = imageProxy.height
             val boundingBox = firstBarcode.boundingBox
             if (boundingBox != null) {
                 val center = PointF(boundingBox.centerX().toFloat(), boundingBox.centerY().toFloat())
