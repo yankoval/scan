@@ -73,7 +73,7 @@ class BarcodeScannerProcessor(
                     Log.e("BarcodeScanner", "Barcode scanning failed", e)
                 }
                 .addOnCompleteListener {
-                    updateAndRedrawGraphics() // Always update graphics to handle removal
+                    updateAndRedrawGraphics(currentTask) // Always update graphics to handle removal
                     imageProxy.close()
                 }
         }
@@ -127,7 +127,7 @@ class BarcodeScannerProcessor(
         }
     }
 
-    private fun updateAndRedrawGraphics() {
+    private fun updateAndRedrawGraphics(currentTask: com.example.scan.model.Task?) {
         val currentTime = System.currentTimeMillis()
 
         // Remove old graphics that haven't been seen for a while
