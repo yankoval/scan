@@ -6,6 +6,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.camera.core.ImageProxy
+import com.example.scan.model.AggregatePackage
+import com.example.scan.model.AggregatePackage_
 import com.example.scan.model.AggregatedCode
 import com.example.scan.model.AggregatedCode_
 import com.google.mlkit.vision.barcode.BarcodeScanner
@@ -28,6 +30,7 @@ class BarcodeScannerProcessor(
 
     private val scannedCodeBox: Box<ScannedCode> = boxStore.boxFor(ScannedCode::class.java)
     private val aggregatedCodeBox: Box<AggregatedCode> = boxStore.boxFor(AggregatedCode::class.java)
+    private val aggregatePackageBox: Box<AggregatePackage> = boxStore.boxFor(AggregatePackage::class.java)
     private var lastSuccessfulScanTime: Long = 0
     private var invalidCodes = emptySet<String>()
     private val activeGraphics = mutableMapOf<String, BarcodeGraphic>()
@@ -95,10 +98,14 @@ class BarcodeScannerProcessor(
 
             // New barcode detected, process and create a graphic for it
             val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
-            val isDuplicateInAggregation = aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(rawValue)).build().findFirst() != null
+            val (contentType, gs1Data) = checkLogic(rawValue)
+
+            val isDuplicateInAggregation = when (contentType) {
+                "GS1_SSCC" -> aggregatePackageBox.query(AggregatePackage_.sscc.equal(rawValue)).build().findFirst() != null
+                else -> aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(rawValue)).build().findFirst() != null
+            }
 
             if (existingCode == null && !isDuplicateInAggregation) {
-                val (contentType, gs1Data) = checkLogic(rawValue)
                 val scannedCode = ScannedCode(
                     code = rawValue,
                     timestamp = currentTime,
