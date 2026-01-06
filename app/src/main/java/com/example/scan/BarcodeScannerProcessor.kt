@@ -73,6 +73,7 @@ class BarcodeScannerProcessor(
                     Log.e("BarcodeScanner", "Barcode scanning failed", e)
                 }
                 .addOnCompleteListener {
+                    updateAndRedrawGraphics() // Always update graphics to handle removal
                     imageProxy.close()
                 }
         }
@@ -115,6 +116,20 @@ class BarcodeScannerProcessor(
             activeGraphics[rawValue] = newGraphic
         }
 
+        // Trigger auto-focus for the first barcode in the frame
+        if (barcodes.isNotEmpty()) {
+            val firstBarcode = barcodes.first()
+            val boundingBox = firstBarcode.boundingBox
+            if (boundingBox != null) {
+                val center = PointF(boundingBox.centerX().toFloat(), boundingBox.centerY().toFloat())
+                listener.onFocusRequired(center, imageProxy.width, imageProxy.height)
+            }
+        }
+    }
+
+    private fun updateAndRedrawGraphics() {
+        val currentTime = System.currentTimeMillis()
+
         // Remove old graphics that haven't been seen for a while
         val iterator = activeGraphics.iterator()
         while (iterator.hasNext()) {
@@ -130,7 +145,7 @@ class BarcodeScannerProcessor(
             graphicOverlay.add(graphic)
         }
 
-        // --- Task processing logic (remains the same) ---
+        // Task processing logic
         (context as? MainActivity)?.taskProcessor?.let { processor ->
             currentTask?.let { task ->
                 val allCodes = scannedCodeBox.all
@@ -142,33 +157,19 @@ class BarcodeScannerProcessor(
                             listener.onCheckSucceeded()
                             invalidCodes = emptySet()
                             scannedCodeBox.removeAll()
-                            // Clear graphics related to the successful aggregation
-                            allCodes.forEach {
-                                activeGraphics.remove(it.code)
-                            }
+                            allCodes.forEach { activeGraphics.remove(it.code) }
                         }
                         is CheckResult.Failure -> {
                             Log.w("BarcodeScanner", "Task check failed: ${result.reason}")
                             listener.onCheckFailed(result.reason)
                             invalidCodes = result.invalidCodes
-                            scannedCodeBox.removeAll() // Clear buffer on failure to allow retry
+                            scannedCodeBox.removeAll()
                         }
                     }
                 }
             }
         }
-        // --- End of task processing logic ---
-
-        // Update UI and trigger auto-focus
         listener.onBarcodeCountUpdated(scannedCodeBox.count())
-        if (barcodes.isNotEmpty()) {
-            val firstBarcode = barcodes.first()
-            val boundingBox = firstBarcode.boundingBox
-            if (boundingBox != null) {
-                val center = PointF(boundingBox.centerX().toFloat(), boundingBox.centerY().toFloat())
-                listener.onFocusRequired(center, imageProxy.width, imageProxy.height)
-            }
-        }
     }
 
     private fun checkLogic(code: String): Pair<String, MutableList<String>> {
