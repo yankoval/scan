@@ -8,8 +8,9 @@ import com.google.mlkit.vision.barcode.common.Barcode
 
 class BarcodeGraphic(
     overlay: GraphicOverlay,
-    private val barcode: Barcode,
-    var isDuplicate: Boolean = false
+    val barcode: Barcode,
+    var isDuplicate: Boolean = false,
+    var lastSeenTimestamp: Long = System.currentTimeMillis()
 ) : GraphicOverlay.Graphic(overlay) {
 
     private val validPaint = Paint().apply {

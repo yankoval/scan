@@ -30,6 +30,8 @@ class BarcodeScannerProcessor(
     private val aggregatedCodeBox: Box<AggregatedCode> = boxStore.boxFor(AggregatedCode::class.java)
     private var lastSuccessfulScanTime: Long = 0
     private var invalidCodes = emptySet<String>()
+    private val activeGraphics = mutableMapOf<String, BarcodeGraphic>()
+    private val GRAPHIC_LIFETIME_MS = 300L
 
     private val options = BarcodeScannerOptions.Builder()
         .setBarcodeFormats(
@@ -55,7 +57,6 @@ class BarcodeScannerProcessor(
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
             val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-            graphicOverlay.clear()
             scanner.process(image)
                 .addOnSuccessListener { barcodes ->
                     if (barcodes.isNotEmpty()) {
@@ -77,32 +78,59 @@ class BarcodeScannerProcessor(
         }
     }
     private fun handleBarcodes(barcodes: List<Barcode>, currentTask: com.example.scan.model.Task?, imageProxy: ImageProxy) {
-        graphicOverlay.clear()
+        val currentTime = System.currentTimeMillis()
         val codesInFrame = mutableSetOf<String>()
 
+        // Process all barcodes detected in the current frame
         for (barcode in barcodes) {
-            val rawValue = barcode.rawValue
-            if (rawValue != null) {
-                codesInFrame.add(rawValue)
-                val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
-                val isDuplicate = aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(rawValue)).build().findFirst() != null
-                if (existingCode == null && !isDuplicate) {
-                    val (contentType, gs1Data) = checkLogic(rawValue)
-                    val scannedCode = ScannedCode(
-                        code = rawValue,
-                        timestamp = System.currentTimeMillis(),
-                        codeType = getBarcodeFormatName(barcode.format),
-                        contentType = contentType,
-                        gs1Data = gs1Data
-                    )
-                    scannedCodeBox.put(scannedCode)
-                    Log.d("BarcodeScanner", "Scanned code: $rawValue, Type: $contentType")
-                }
-                val isInvalid = invalidCodes.contains(rawValue)
-                graphicOverlay.add(BarcodeGraphic(graphicOverlay, barcode, isDuplicate || isInvalid))
+            val rawValue = barcode.rawValue ?: continue
+            codesInFrame.add(rawValue)
+
+            // If the graphic is already active, just update its timestamp
+            if (activeGraphics.containsKey(rawValue)) {
+                activeGraphics[rawValue]?.lastSeenTimestamp = currentTime
+                continue
+            }
+
+            // New barcode detected, process and create a graphic for it
+            val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
+            val isDuplicateInAggregation = aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(rawValue)).build().findFirst() != null
+
+            if (existingCode == null && !isDuplicateInAggregation) {
+                val (contentType, gs1Data) = checkLogic(rawValue)
+                val scannedCode = ScannedCode(
+                    code = rawValue,
+                    timestamp = currentTime,
+                    codeType = getBarcodeFormatName(barcode.format),
+                    contentType = contentType,
+                    gs1Data = gs1Data
+                )
+                scannedCodeBox.put(scannedCode)
+                Log.d("BarcodeScanner", "Scanned new code: $rawValue, Type: $contentType")
+            }
+
+            // Create a new graphic
+            val isInvalid = invalidCodes.contains(rawValue)
+            val newGraphic = BarcodeGraphic(graphicOverlay, barcode, isDuplicateInAggregation || isInvalid, currentTime)
+            activeGraphics[rawValue] = newGraphic
+        }
+
+        // Remove old graphics that haven't been seen for a while
+        val iterator = activeGraphics.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            if (currentTime - entry.value.lastSeenTimestamp > GRAPHIC_LIFETIME_MS) {
+                iterator.remove()
             }
         }
 
+        // Redraw the overlay with active graphics
+        graphicOverlay.clear()
+        activeGraphics.values.forEach { graphic ->
+            graphicOverlay.add(graphic)
+        }
+
+        // --- Task processing logic (remains the same) ---
         (context as? MainActivity)?.taskProcessor?.let { processor ->
             currentTask?.let { task ->
                 val allCodes = scannedCodeBox.all
@@ -114,30 +142,31 @@ class BarcodeScannerProcessor(
                             listener.onCheckSucceeded()
                             invalidCodes = emptySet()
                             scannedCodeBox.removeAll()
+                            // Clear graphics related to the successful aggregation
+                            allCodes.forEach {
+                                activeGraphics.remove(it.code)
+                            }
                         }
                         is CheckResult.Failure -> {
                             Log.w("BarcodeScanner", "Task check failed: ${result.reason}")
                             listener.onCheckFailed(result.reason)
                             invalidCodes = result.invalidCodes
-                            scannedCodeBox.removeAll()
+                            scannedCodeBox.removeAll() // Clear buffer on failure to allow retry
                         }
                     }
                 }
             }
         }
+        // --- End of task processing logic ---
 
-
-        val totalCount = scannedCodeBox.count()
-        listener.onBarcodeCountUpdated(totalCount)
-
+        // Update UI and trigger auto-focus
+        listener.onBarcodeCountUpdated(scannedCodeBox.count())
         if (barcodes.isNotEmpty()) {
             val firstBarcode = barcodes.first()
-            val imageWidth = imageProxy.width
-            val imageHeight = imageProxy.height
             val boundingBox = firstBarcode.boundingBox
             if (boundingBox != null) {
                 val center = PointF(boundingBox.centerX().toFloat(), boundingBox.centerY().toFloat())
-                listener.onFocusRequired(center, imageWidth, imageHeight)
+                listener.onFocusRequired(center, imageProxy.width, imageProxy.height)
             }
         }
     }
