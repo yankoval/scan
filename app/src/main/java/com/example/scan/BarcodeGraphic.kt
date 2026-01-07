@@ -6,24 +6,44 @@ import android.graphics.Paint
 import android.graphics.RectF
 import com.google.mlkit.vision.barcode.common.Barcode
 
-class BarcodeGraphic(overlay: GraphicOverlay, private val barcode: Barcode) : GraphicOverlay.Graphic(overlay) {
+class BarcodeGraphic(
+    overlay: GraphicOverlay,
+    val barcode: Barcode,
+    var isDuplicate: Boolean = false,
+    var lastSeenTimestamp: Long = System.currentTimeMillis()
+) : GraphicOverlay.Graphic(overlay) {
 
-    private val rectPaint = Paint().apply {
-        color = Color.RED
+    private val validPaint = Paint().apply {
+        color = Color.GREEN
         style = Paint.Style.STROKE
-        strokeWidth = 4.0f
+        strokeWidth = 6.0f
+        alpha = 200
     }
 
-    private val barcodePaint = Paint().apply {
+    private val invalidPaint = Paint().apply {
+        color = Color.RED
+        style = Paint.Style.STROKE
+        strokeWidth = 6.0f
+        alpha = 200
+    }
+
+    private val textPaint = Paint().apply {
         color = Color.WHITE
-        textSize = 36.0f
+        textSize = 40.0f
+        alpha = 200
     }
 
     override fun draw(canvas: Canvas) {
         barcode.boundingBox?.let { boundingBox ->
+            // Adjusts the bounding box to match the view scale and orientation.
             val rect = calculateRect(boundingBox)
-            canvas.drawRect(rect, rectPaint)
-            canvas.drawText(barcode.rawValue ?: "", rect.left, rect.bottom, barcodePaint)
+            val paint = if (isDuplicate) invalidPaint else validPaint
+            canvas.drawRect(rect, paint)
+
+            // Draws the barcode raw value below the box.
+            barcode.rawValue?.let {
+                canvas.drawText(it, rect.left, rect.bottom + 40f, textPaint)
+            }
         }
     }
 }

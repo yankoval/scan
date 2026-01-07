@@ -26,12 +26,8 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.scan.databinding.ActivityMainBinding
-import com.example.scan.model.ScannedCode
-import com.example.scan.model.ScannedCodeDto
+import com.example.scan.model.*
 import android.view.View
-import com.example.scan.model.AggregatePackage
-import com.example.scan.model.Task
-import com.example.scan.model.TaskEntity
 import com.example.scan.task.AggregationTaskProcessor
 import com.example.scan.task.ITaskProcessor
 import io.objectbox.Box
@@ -48,6 +44,9 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScannedListener {
 
@@ -224,6 +223,25 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         }
     }
 
+    private fun showErrorFeedback() {
+        // Show red border
+        viewBinding.errorFeedbackBorder.visibility = View.VISIBLE
+        Handler(Looper.getMainLooper()).postDelayed({
+            viewBinding.errorFeedbackBorder.visibility = View.GONE
+        }, 1000)
+
+        // Play sound
+        try {
+            // Using a different tone for error, e.g., a short beep
+            val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+            toneGen.startTone(ToneGenerator.TONE_CDMA_SOFT_ERROR_LITE, 500) // Longer tone for G note
+            toneGen.release()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to play error tone", e)
+        }
+    }
+
+
     private fun updateUiForTaskMode() {
         val inTaskMode = currentTask != null
         viewBinding.taskModeIndicator.visibility = if (inTaskMode) View.VISIBLE else View.GONE
@@ -256,8 +274,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private fun showCloseTaskDialog() {
         AlertDialog.Builder(this)
             .setTitle("Close Task")
-            .setMessage("Are you sure you want to close the current task? All task data will be deleted.")
-            .setPositiveButton("Close") { _, _ ->
+            .setMessage("Are you sure you want to close the current task? This will generate the final report.")
+            .setPositiveButton("Close & Export") { _, _ ->
                 closeTask()
             }
             .setNegativeButton("Cancel", null)
@@ -265,12 +283,62 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     private fun closeTask() {
+        generateAndExportAggregationReport()
+        clearTaskData()
+    }
+
+    private fun clearTaskData() {
+        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
+        val aggregatedCodeBox: Box<AggregatedCode> = (application as MainApplication).boxStore.boxFor(AggregatedCode::class.java)
+
+        aggregatePackageBox.removeAll()
+        aggregatedCodeBox.removeAll()
         taskBox.remove(TASK_ENTITY_ID)
+
         currentTask = null
         taskProcessor = null
-        Toast.makeText(this, "Task closed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Task closed and data cleared", Toast.LENGTH_SHORT).show()
         updateUiForTaskMode()
     }
+
+    private fun generateAndExportAggregationReport() {
+        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
+        val allPackages = aggregatePackageBox.all
+
+        if (currentTask == null) {
+            Log.e(TAG, "Cannot generate report without an active task.")
+            return
+        }
+
+        val readyBoxes = allPackages.mapIndexed { index, pkg ->
+            val productCodes = pkg.codes.map { it.fullCode }
+            ReadyBox(
+                Number = index,
+                boxNumber = pkg.sscc,
+                boxTime = formatInstant(pkg.timestamp),
+                productNumbersFull = productCodes
+            )
+        }
+
+        val report = AggregationReport(
+            id = currentTask!!.id,
+            startTime = currentTask!!.startTime,
+            endTime = formatInstant(Instant.now().toEpochMilli()),
+            readyBox = readyBoxes
+        )
+
+        val jsonString = Json.encodeToString(report)
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val fileName = "aggregation_report_$timeStamp.json"
+        shareFile(jsonString, fileName, "application/json", "Export Aggregation Report")
+    }
+
+    private fun formatInstant(timestamp: Long): String {
+        val instant = Instant.ofEpochMilli(timestamp)
+        val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault())
+        return formatter.format(instant)
+    }
+
 
     private fun showExportDialog() {
         val options = arrayOf(getString(R.string.export_csv), getString(R.string.export_json))
@@ -386,9 +454,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 .build()
 
             val boxStore = (application as MainApplication).boxStore
-            barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this, boxStore, this)
+            barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this, boxStore)
             imageAnalyzer.also {
                 it.setAnalyzer(cameraExecutor) { imageProxy ->
+                    viewBinding.graphicOverlay.setCameraInfo(imageProxy.width, imageProxy.height, CameraSelector.LENS_FACING_BACK)
                     barcodeScannerProcessor?.processImageProxy(imageProxy, currentTask)
                 }
             }
@@ -467,6 +536,20 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             viewBinding.barcodeCountText.text = getString(R.string.barcode_count, totalCount)
         }
     }
+
+    override fun onCheckSucceeded() {
+        runOnUiThread {
+            updateAggregateCount()
+            showSuccessFeedback()
+        }
+    }
+
+    override fun onCheckFailed(reason: String) {
+        runOnUiThread {
+            showErrorFeedback()
+        }
+    }
+
 
     private fun setupTapToFocus(cameraControl: CameraControl) {
         viewBinding.previewView.setOnTouchListener { _, event ->

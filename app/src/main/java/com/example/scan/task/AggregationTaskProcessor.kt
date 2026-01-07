@@ -12,7 +12,7 @@ class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor 
     private val aggregatePackageBox: Box<AggregatePackage> = boxStore.boxFor()
     private val aggregatedCodeBox: Box<AggregatedCode> = boxStore.boxFor()
 
-    override fun check(codes: List<ScannedCode>, task: Task): Boolean {
+    override fun check(codes: List<ScannedCode>, task: Task): CheckResult {
         Timber.d("--- Starting Aggregation Check ---")
         Timber.d("Total codes to check: ${codes.size}")
 
@@ -23,8 +23,9 @@ class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor 
 
         // 2. Check for a single SSCC code
         if (packageCodes.size != 1) {
-            Timber.w("CHECK FAILED: Expected 1 SSCC code, but found ${packageCodes.size}.")
-            return false
+            val reason = "CHECK FAILED: Expected 1 SSCC code, but found ${packageCodes.size}."
+            Timber.w(reason)
+            return CheckResult.Failure(reason)
         }
         val sscc = packageCodes.first().code
         Timber.d("SSCC code: $sscc")
@@ -32,13 +33,17 @@ class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor 
         // 3. Check if GTINs match the task
         val taskGtin = task.gtin
         Timber.d("Task GTIN: $taskGtin")
+        val mismatchedGtinCodes = mutableSetOf<String>()
         productCodes.forEach { code ->
             val gtinFromCode = code.gs1Data.firstOrNull { it.startsWith("01:") }?.substring(3)
             Timber.d("Checking code '${code.code}' with GTIN '$gtinFromCode'")
             if (gtinFromCode != taskGtin) {
                 Timber.w("CHECK FAILED: Mismatched GTIN. Task requires '$taskGtin', but found '$gtinFromCode'.")
-                return false
+                mismatchedGtinCodes.add(code.code)
             }
+        }
+        if (mismatchedGtinCodes.isNotEmpty()) {
+            return CheckResult.Failure("Mismatched GTIN", mismatchedGtinCodes)
         }
         Timber.d("GTIN check passed.")
 
@@ -47,8 +52,9 @@ class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor 
         val distinctProductCodes = productCodes.distinctBy { it.code }
         Timber.d("Task requires $numPacksInBox product codes. Found ${distinctProductCodes.size} distinct product codes.")
         if (distinctProductCodes.size != numPacksInBox) {
-            Timber.w("CHECK FAILED: Code count mismatch.")
-            return false
+            val reason = "CHECK FAILED: Code count mismatch. Expected ${numPacksInBox}, found ${distinctProductCodes.size}"
+            Timber.w(reason)
+            return CheckResult.Failure(reason)
         }
         Timber.d("Product code count check passed.")
 
@@ -56,18 +62,23 @@ class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor 
         Timber.d("Checking for SSCC uniqueness...")
         val existingPackage = aggregatePackageBox.query(AggregatePackage_.sscc.equal(sscc)).build().findFirst()
         if (existingPackage != null) {
-            Timber.w("CHECK FAILED: SSCC '$sscc' already exists.")
-            return false
+            val reason = "CHECK FAILED: SSCC '$sscc' already exists."
+            Timber.w(reason)
+            return CheckResult.Failure(reason, setOf(sscc))
         }
         Timber.d("SSCC uniqueness check passed.")
 
         Timber.d("Checking for product code uniqueness...")
+        val duplicateProductCodes = mutableSetOf<String>()
         for (productCode in distinctProductCodes) {
             val existingCode = aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(productCode.code)).build().findFirst()
             if (existingCode != null) {
                 Timber.w("CHECK FAILED: Product code '${productCode.code}' already exists in the database.")
-                return false
+                duplicateProductCodes.add(productCode.code)
             }
+        }
+        if (duplicateProductCodes.isNotEmpty()) {
+            return CheckResult.Failure("Duplicate product code", duplicateProductCodes)
         }
         Timber.d("Product code uniqueness check passed.")
 
@@ -75,7 +86,7 @@ class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor 
         Timber.d("--- All Checks Passed ---")
         Timber.d("Preparing to aggregate package with SSCC '$sscc'.")
 
-        val newPackage = AggregatePackage(sscc = sscc)
+        val newPackage = AggregatePackage(sscc = sscc, timestamp = System.currentTimeMillis())
         val newAggregatedCodes = distinctProductCodes.map {
             val gtin = it.gs1Data.first { data -> data.startsWith("01:") }.substring(3)
             val serial = it.gs1Data.first { data -> data.startsWith("21:") }.substring(3)
@@ -99,11 +110,10 @@ class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor 
             Timber.d("Database transaction successful.")
         } catch (e: Exception) {
             Timber.e(e, "DATABASE TRANSACTION FAILED")
-            // Re-throw or handle the exception as needed. For now, just log and fail.
-            return false
+            return CheckResult.Failure("Database transaction failed: ${e.message}")
         }
 
         Timber.d("--- Aggregation Check Successful ---")
-        return true
+        return CheckResult.Success
     }
 }
