@@ -13,6 +13,6 @@ class MainApplication : Application() {
         super.onCreate()
         boxStore = MyObjectBox.builder().androidContext(this).build()
         // Always plant trees to get around BuildConfig issues in CI
-        Timber.plant(Timber.DebugTree(), FileLoggingTree(this))
+        Timber.plant(Timber.DebugTree())
     }
 }
