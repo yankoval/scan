@@ -24,6 +24,7 @@ data class Task(
     val numPacksInParcel: Int,
     val boxLabelFields: List<BoxLabelField>,
     val productNumbers: List<String>,
+    @SerialName("boхNumbers") // Note: API provides this key with a Cyrillic 'х'
     val boxNumbers: List<String>,
     val startTime: String = ""
 )
