@@ -13,7 +13,7 @@ data class Task(
     val lotNo: String,
     val expDate: String,
     val addProdInfo: String,
-    @SerialName("numPacksInBox")
+    @SerialName("numРacksInBox")
     val numPacksInBox: Int,
     val numLayersInBox: Int,
     val maxNoRead: Int,
