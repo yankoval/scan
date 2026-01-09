@@ -83,10 +83,6 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             )
         }
 
-        viewBinding.shareButton.setOnClickListener {
-            showExportDialog()
-        }
-
         viewBinding.closeTaskButton.setOnClickListener {
             showCloseTaskDialog()
         }
@@ -335,55 +331,6 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
 
-    private fun showExportDialog() {
-        val options = arrayOf(getString(R.string.export_csv), getString(R.string.export_json))
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.export_dialog_title))
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> exportCodesToCsv()
-                    1 -> exportCodesToJson()
-                }
-            }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
-    }
-
-    private fun exportCodesToCsv() {
-        val box: Box<ScannedCode> = (application as MainApplication).boxStore.boxFor(ScannedCode::class.java)
-        val codes = box.all
-        val csvBuilder = StringBuilder()
-        csvBuilder.append("code,timestamp\n")
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        for (scannedCode in codes) {
-            val formattedDate = sdf.format(Date(scannedCode.timestamp))
-            csvBuilder.append("\"${scannedCode.code}\",\"$formattedDate\"\n")
-        }
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val fileName = "scanned_codes_$timeStamp.csv"
-        shareFile(csvBuilder.toString(), fileName, "text/csv", getString(R.string.share_csv_title))
-        box.removeAll()
-    }
-
-    private fun exportCodesToJson() {
-        val box: Box<ScannedCode> = (application as MainApplication).boxStore.boxFor(ScannedCode::class.java)
-        val codes = box.all
-        val codesDto = codes.map {
-            ScannedCodeDto(
-                id = it.id,
-                code = it.code,
-                codeType = it.codeType,
-                contentType = it.contentType,
-                gs1Data = it.gs1Data,
-                timestamp = it.timestamp
-            )
-        }
-        val jsonString = Json.encodeToString(codesDto)
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val fileName = "scanned_codes_$timeStamp.json"
-        shareFile(jsonString, fileName, "application/json", getString(R.string.share_json_title))
-        box.removeAll()
-    }
 
     private fun shareFile(content: String, fileName: String, mimeType: String, chooserTitle: String) {
         try {

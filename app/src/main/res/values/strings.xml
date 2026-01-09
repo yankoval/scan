@@ -1,10 +1,4 @@
 <resources>
     <string name="app_name">scan</string>
     <string name="barcode_count">Всего: %1$d</string>
-    <string name="export_dialog_title">Choose Export Format</string>
-    <string name="export_csv">Export to CSV</string>
-    <string name="export_json">Export to JSON</string>
-    <string name="cancel">Cancel</string>
-    <string name="share_csv_title">Share CSV</string>
-    <string name="share_json_title">Share JSON</string>
 </resources>
