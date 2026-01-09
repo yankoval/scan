@@ -2,6 +2,7 @@ package com.example.scan.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonNames
 
 @Serializable
 data class Task(
@@ -13,7 +14,7 @@ data class Task(
     val lotNo: String,
     val expDate: String,
     val addProdInfo: String,
-    @SerialName("numРacksInBox")
+    @JsonNames("numPacksInBox", "numРacksInBox") // Support both Latin 'P' and Cyrillic 'Р'
     val numPacksInBox: Int,
     val numLayersInBox: Int,
     val maxNoRead: Int,
@@ -24,7 +25,6 @@ data class Task(
     val numPacksInParcel: Int,
     val boxLabelFields: List<BoxLabelField>,
     val productNumbers: List<String>,
-    @SerialName("boхNumbers") // Note: API provides this key with a Cyrillic 'х'
     val boxNumbers: List<String>,
     val startTime: String = ""
 )
