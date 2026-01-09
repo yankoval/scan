@@ -114,17 +114,23 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     private fun readTextFromUri(uri: Uri): String {
-        val stringBuilder = StringBuilder()
         contentResolver.openInputStream(uri)?.use { inputStream ->
-            BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
-                var line: String? = reader.readLine()
-                while (line != null) {
-                    stringBuilder.append(line)
-                    line = reader.readLine()
-                }
+            val bufferedInputStream = java.io.BufferedInputStream(inputStream)
+            bufferedInputStream.mark(3)
+            val bom = ByteArray(3)
+            // Try to read the first 3 bytes
+            val bytesRead = bufferedInputStream.read(bom, 0, 3)
+
+            // Check if the read bytes form a UTF-8 BOM.
+            // If not, reset the stream to the beginning.
+            if (bytesRead < 3 || !(bom[0] == 0xEF.toByte() && bom[1] == 0xBB.toByte() && bom[2] == 0xBF.toByte())) {
+                bufferedInputStream.reset()
             }
+            // Now, the stream is positioned correctly (after BOM or at the start).
+            // Read the rest of the stream as a UTF-8 string.
+            return bufferedInputStream.reader(Charsets.UTF_8).readText()
         }
-        return stringBuilder.toString()
+        return ""
     }
     private fun loadTask() {
         val taskEntity = taskBox.get(TASK_ENTITY_ID)
