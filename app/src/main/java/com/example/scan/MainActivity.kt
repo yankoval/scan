@@ -116,7 +116,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private fun readTextFromUri(uri: Uri): String {
         val stringBuilder = StringBuilder()
         contentResolver.openInputStream(uri)?.use { inputStream ->
-            BufferedReader(InputStreamReader(inputStream)).use { reader ->
+            BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8)).use { reader ->
                 var line: String? = reader.readLine()
                 while (line != null) {
                     stringBuilder.append(line)
@@ -166,8 +166,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             showSuccessFeedback()
             isFileProcessed = true
         } catch (e: Exception) {
-            // It's not a task file, or it's invalid. Silently ignore and try parsing as settings.
-            Log.d(TAG, "Not a valid Task JSON: ${e.message}")
+            // It's not a task file, or it's invalid. Log the full error for debugging.
+            Log.e(TAG, "Could not parse JSON as a Task", e)
         }
 
         // If not processed as a task, try to parse as a settings file
@@ -182,18 +182,17 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 }
             } catch (e: Exception) {
                 // Not a settings file either.
-                Log.d(TAG, "Not a valid Settings JSON: ${e.message}")
+                Log.e(TAG, "Could not parse JSON as Settings", e)
             }
         }
 
-        // If the file was not processed at all, show an error
-        if (!isFileProcessed) {
+        // If the file was processed, update the UI. Otherwise, show an error and do nothing to the UI.
+        if (isFileProcessed) {
+            updateUiForTaskMode()
+        } else {
             Log.e(TAG, "Failed to parse JSON content as Task or Settings")
             Toast.makeText(this, "Invalid file format", Toast.LENGTH_SHORT).show()
         }
-
-        // Always update the UI at the end
-        updateUiForTaskMode()
     }
 
     private fun showSuccessFeedback() {
