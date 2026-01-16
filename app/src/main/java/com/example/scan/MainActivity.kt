@@ -19,7 +19,10 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.camera2.interop.Camera2CameraControl
 import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.CaptureRequestOptions
+import android.hardware.camera2.CaptureRequest
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
@@ -85,6 +88,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
         viewBinding.closeTaskButton.setOnClickListener {
             showCloseTaskDialog()
+        }
+
+        viewBinding.afCheckbox.setOnCheckedChangeListener { _, _ ->
+            updateCameraFocusMode()
         }
 
         handleIntent(intent)
@@ -393,6 +400,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
                 this.cameraControl = camera.cameraControl
                 this.cameraControl?.setZoomRatio(1.0f)
+                updateCameraFocusMode()
                 setupTapToFocus(this.cameraControl!!)
 
             } catch (exc: Exception) {
@@ -430,7 +438,30 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         }
     }
 
+    @androidx.annotation.OptIn(androidx.camera.camera2.interop.ExperimentalCamera2Interop::class)
+    private fun updateCameraFocusMode() {
+        val control = cameraControl ?: return
+        val camera2Control = Camera2CameraControl.from(control)
+
+        val afMode = if (viewBinding.afCheckbox.isChecked) {
+            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+        } else {
+            CaptureRequest.CONTROL_AF_MODE_OFF
+        }
+
+        val options = CaptureRequestOptions.Builder()
+            .setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, afMode)
+            .build()
+
+        camera2Control.setCaptureRequestOptions(options)
+
+        if (!viewBinding.afCheckbox.isChecked) {
+            control.cancelFocusAndMetering()
+        }
+    }
+
     override fun onFocusRequired(point: PointF, imageWidth: Int, imageHeight: Int) {
+        if (!viewBinding.afCheckbox.isChecked) return
         if (viewBinding.previewView.width == 0 || viewBinding.previewView.height == 0) {
             return
         }
@@ -469,7 +500,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
     private fun setupTapToFocus(cameraControl: CameraControl) {
         viewBinding.previewView.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) {
+            if (viewBinding.afCheckbox.isChecked && event.action == MotionEvent.ACTION_DOWN) {
                 val factory = viewBinding.previewView.meteringPointFactory
                 val point = factory.createPoint(event.x, event.y)
                 val action = FocusMeteringAction.Builder(point).build()

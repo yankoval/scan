@@ -21,6 +21,31 @@
         app:layout_constraintRight_toRightOf="@id/preview_view"
         app:layout_constraintTop_toTopOf="@id/preview_view" />
 
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/af_guideline_h"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.09" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/af_guideline_v"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.91" />
+
+    <CheckBox
+        android:id="@+id/af_checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="AF"
+        android:textColor="@android:color/white"
+        android:buttonTint="@android:color/white"
+        android:checked="true"
+        app:layout_constraintTop_toTopOf="@id/af_guideline_h"
+        app:layout_constraintEnd_toEndOf="@id/af_guideline_v" />
+
     <View
         android:id="@+id/success_feedback_border"
         android:layout_width="0dp"
