@@ -446,7 +446,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         val afMode = if (viewBinding.afCheckbox.isChecked) {
             CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
         } else {
-            CaptureRequest.CONTROL_AF_MODE_OFF
+            CaptureRequest.CONTROL_AF_MODE_AUTO
         }
 
         val options = CaptureRequestOptions.Builder()
@@ -500,7 +500,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
     private fun setupTapToFocus(cameraControl: CameraControl) {
         viewBinding.previewView.setOnTouchListener { _, event ->
-            if (viewBinding.afCheckbox.isChecked && event.action == MotionEvent.ACTION_DOWN) {
+            if (event.action == MotionEvent.ACTION_DOWN) {
                 val factory = viewBinding.previewView.meteringPointFactory
                 val point = factory.createPoint(event.x, event.y)
                 val action = FocusMeteringAction.Builder(point).build()
