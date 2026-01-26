@@ -10,6 +10,7 @@ class BarcodeGraphic(
     overlay: GraphicOverlay,
     val barcode: Barcode,
     var isDuplicate: Boolean = false,
+    var isMismatched: Boolean = false,
     var lastSeenTimestamp: Long = System.currentTimeMillis()
 ) : GraphicOverlay.Graphic(overlay) {
 
@@ -27,6 +28,13 @@ class BarcodeGraphic(
         alpha = 200
     }
 
+    private val mismatchedPaint = Paint().apply {
+        color = Color.GRAY
+        style = Paint.Style.STROKE
+        strokeWidth = 6.0f
+        alpha = 200
+    }
+
     private val textPaint = Paint().apply {
         color = Color.WHITE
         textSize = 40.0f
@@ -37,7 +45,11 @@ class BarcodeGraphic(
         barcode.boundingBox?.let { boundingBox ->
             // Adjusts the bounding box to match the view scale and orientation.
             val rect = calculateRect(boundingBox)
-            val paint = if (isDuplicate) invalidPaint else validPaint
+            val paint = when {
+                isDuplicate -> invalidPaint
+                isMismatched -> mismatchedPaint
+                else -> validPaint
+            }
             canvas.drawRect(rect, paint)
 
             // Draws the barcode raw value below the box.

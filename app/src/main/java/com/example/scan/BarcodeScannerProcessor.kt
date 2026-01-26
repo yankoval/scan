@@ -98,20 +98,34 @@ class BarcodeScannerProcessor(
 
             // New barcode detected, process and create a graphic for it
             val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
-            val (contentType, gs1Data) = checkLogic(rawValue)
+            val (contentType, gs1DataList) = checkLogic(rawValue)
 
             val isDuplicateInAggregation = when (contentType) {
                 "GS1_SSCC" -> aggregatePackageBox.query(AggregatePackage_.sscc.equal(rawValue)).build().findFirst() != null
                 else -> aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(rawValue)).build().findFirst() != null
             }
 
-            if (existingCode == null && !isDuplicateInAggregation) {
+            // Determine if the code matches the current task
+            var isMismatched = false
+            if (currentTask != null) {
+                val gs1DataMap = gs1DataList.associate {
+                    val parts = it.split(":", limit = 2)
+                    parts[0] to parts.getOrElse(1) { "" }
+                }
+                val isProductMatch = isHonestSign(barcode, gs1DataMap, currentTask)
+                val isSscc = contentType == "GS1_SSCC"
+                if (!isProductMatch && !isSscc) {
+                    isMismatched = true
+                }
+            }
+
+            if (existingCode == null && !isDuplicateInAggregation && !isMismatched) {
                 val scannedCode = ScannedCode(
                     code = rawValue,
                     timestamp = currentTime,
                     codeType = getBarcodeFormatName(barcode.format),
                     contentType = contentType,
-                    gs1Data = gs1Data
+                    gs1Data = gs1DataList.toMutableList()
                 )
                 scannedCodeBox.put(scannedCode)
                 Log.d("BarcodeScanner", "Scanned new code: $rawValue, Type: $contentType")
@@ -119,7 +133,13 @@ class BarcodeScannerProcessor(
 
             // Create a new graphic
             val isInvalid = invalidCodes.contains(rawValue)
-            val newGraphic = BarcodeGraphic(graphicOverlay, barcode, isDuplicateInAggregation || isInvalid, currentTime)
+            val newGraphic = BarcodeGraphic(
+                overlay = graphicOverlay,
+                barcode = barcode,
+                isDuplicate = isDuplicateInAggregation || isInvalid,
+                isMismatched = isMismatched,
+                lastSeenTimestamp = currentTime
+            )
             activeGraphics[rawValue] = newGraphic
         }
 
@@ -222,6 +242,25 @@ class BarcodeScannerProcessor(
             Barcode.FORMAT_AZTEC -> "Aztec"
             else -> "Unknown"
         }
+    }
+
+    private fun isHonestSign(barcode: Barcode, gs1DataMap: Map<String, String>, task: com.example.scan.model.Task?): Boolean {
+        if (barcode.format != Barcode.FORMAT_DATA_MATRIX) return false
+        val rawValue = barcode.rawValue ?: return false
+
+        // Rule: Must start with GS (\u001d) or ]C1 prefix
+        if (!rawValue.startsWith("\u001d") && !rawValue.startsWith("]C1")) return false
+
+        // Rule: Must have Serial Number (21) and Crypto Tail (93)
+        if (!gs1DataMap.containsKey("21") || !gs1DataMap.containsKey("93")) return false
+
+        // Rule: Must have GTIN (01)
+        val gtin = gs1DataMap["01"] ?: return false
+
+        // Rule: If task is present, GTIN must match
+        if (task != null && gtin != task.gtin) return false
+
+        return true
     }
 
     interface OnBarcodeScannedListener {
