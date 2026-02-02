@@ -1,0 +1,145 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:4890442748732729948",
+      "lastPropertyId": "3:6322146456213148510",
+      "name": "AggregatePackage",
+      "properties": [
+        {
+          "id": "1:7390484876884598375",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:3787601826349788759",
+          "name": "sscc",
+          "indexId": "1:8761188497337178569",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "3:6322146456213148510",
+          "name": "timestamp",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "2:7917162183545190755",
+      "lastPropertyId": "5:7759655514323795075",
+      "name": "AggregatedCode",
+      "properties": [
+        {
+          "id": "1:2365823620541494284",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:5087279585527443854",
+          "name": "fullCode",
+          "indexId": "2:5474434468370772679",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "3:2729772798341010010",
+          "name": "gtin",
+          "type": 9
+        },
+        {
+          "id": "4:5625681417565495732",
+          "name": "serialNumber",
+          "type": 9
+        },
+        {
+          "id": "5:7759655514323795075",
+          "name": "aggregatePackageId",
+          "indexId": "3:2214120013664223836",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "AggregatePackage"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "3:71895402854057557",
+      "lastPropertyId": "6:6511078676772488808",
+      "name": "ScannedCode",
+      "properties": [
+        {
+          "id": "1:8849595549139640486",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:8508587602905897937",
+          "name": "code",
+          "type": 9
+        },
+        {
+          "id": "3:5819260722733255307",
+          "name": "codeType",
+          "indexId": "4:1803452994295970980",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "4:561632936235005774",
+          "name": "contentType",
+          "indexId": "5:2270136995509788660",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "5:1093429827380402545",
+          "name": "gs1Data",
+          "type": 30
+        },
+        {
+          "id": "6:6511078676772488808",
+          "name": "timestamp",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "4:1340015920411706942",
+      "lastPropertyId": "2:203281389521253349",
+      "name": "TaskEntity",
+      "properties": [
+        {
+          "id": "1:6953570125389956238",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:203281389521253349",
+          "name": "json",
+          "type": 9
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "4:1340015920411706942",
+  "lastIndexId": "5:2270136995509788660",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [],
+  "retiredRelationUids": [],
+  "version": 1
+}
