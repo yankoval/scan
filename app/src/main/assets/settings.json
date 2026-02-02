@@ -1,4 +1,6 @@
 {
   "serviceUrl": "https://api.example.com/scandata",
-  "default_camera": "standard"
+  "default_camera": "standard",
+  "aggregateCodeFilterTemplate": "^]C1",
+  "aggregatedCodeFilterTemplate": "^\\u001d"
 }

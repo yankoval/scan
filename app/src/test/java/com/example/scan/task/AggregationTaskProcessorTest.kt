@@ -36,10 +36,24 @@ class AggregationTaskProcessorTest {
     private fun createTask(gtin: String, numPacks: Int): Task {
         return Task(
             id = "test-task",
+            date = "2023-01-01",
+            lineNum = "1",
+            isGroup = false,
             gtin = gtin,
             lotNo = "LOT123",
             expDate = "2025-12-31",
+            addProdInfo = "",
             numPacksInBox = numPacks,
+            numLayersInBox = 1,
+            maxNoRead = 0,
+            urlLabelProductTemplate = "",
+            urlLabelBoxTemplate = "",
+            numLabelAtBox = 1,
+            lengthBox = 0.0,
+            numPacksInParcel = 0,
+            boxLabelFields = emptyList(),
+            productNumbers = emptyList(),
+            boxNumbers = emptyList(),
             startTime = "2023-01-01T12:00:00Z"
         )
     }

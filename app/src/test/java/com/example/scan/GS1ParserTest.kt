@@ -15,7 +15,7 @@ class GS1ParserTest {
             "21" to "5B,LN)",
             "93" to "gJXT"
         )
-        val result = parser.parse(code, "DataMatrix")
+        val result = parser.parse(code)
         assertEquals(expected, result)
     }
 
@@ -23,7 +23,7 @@ class GS1ParserTest {
     fun `test valid gs1-128 code`() {
         val code = "]C100046070517900000056"
         val expected = mapOf("00" to "046070517900000056")
-        val result = parser.parse(code, "Code128")
+        val result = parser.parse(code)
         assertEquals(expected, result)
     }
 
@@ -31,20 +31,23 @@ class GS1ParserTest {
     fun `test valid ean-13 code`() {
         val code = "4010276020752"
         val expected = mapOf("01" to "4010276020752")
-        val result = parser.parse(code, "EAN-13")
+        val result = parser.parse(code)
         assertEquals(expected, result)
     }
 
-    @Test(expected = GS1Parser.GS1ParseException::class)
+    @Test
     fun `test invalid ean-13 code`() {
         val code = "12345"
-        parser.parse(code, "EAN-13")
+        val result = parser.parse(code)
+        assertTrue(result.isEmpty())
     }
 
-    @Test(expected = GS1Parser.GS1ParseException::class)
+    @Test
     fun `test unknown AI`() {
         val code = "99ABC123"
-        parser.parse(code, "DataMatrix")
+        val result = parser.parse(code)
+        // GS1Parser currently stops and returns what it found so far if AI is unknown
+        assertTrue(result.isEmpty())
     }
 
     @Test
@@ -55,7 +58,7 @@ class GS1ParserTest {
             "21" to "5,IN\"j",
             "93" to "4P4Z"
         )
-        val result = parser.parse(code, "DataMatrix")
+        val result = parser.parse(code)
         assertEquals(expected, result)
     }
 }

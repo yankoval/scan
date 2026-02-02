@@ -30,6 +30,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.scan.databinding.ActivityMainBinding
 import com.example.scan.model.*
+import com.example.scan.utility.CodeFilter
+import com.example.scan.utility.ReportGenerator
 import android.view.View
 import com.example.scan.task.AggregationTaskProcessor
 import com.example.scan.task.ITaskProcessor
@@ -303,26 +305,20 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
         val allPackages = aggregatePackageBox.all
 
-        if (currentTask == null) {
+        val task = currentTask
+        if (task == null) {
             Log.e(TAG, "Cannot generate report without an active task.")
             return
         }
 
-        val readyBoxes = allPackages.mapIndexed { index, pkg ->
-            val productCodes = pkg.codes.map { it.fullCode }
-            ReadyBox(
-                Number = index,
-                boxNumber = pkg.sscc,
-                boxTime = formatInstant(pkg.timestamp),
-                productNumbersFull = productCodes
-            )
-        }
+        val aggregateFilter = settingsManager.getAggregateCodeFilterTemplate()
+        val aggregatedFilter = settingsManager.getAggregatedCodeFilterTemplate()
 
-        val report = AggregationReport(
-            id = currentTask!!.id,
-            startTime = currentTask!!.startTime,
-            endTime = formatInstant(Instant.now().toEpochMilli()),
-            readyBox = readyBoxes
+        val report = ReportGenerator.generateAggregationReport(
+            task,
+            allPackages,
+            aggregateFilter,
+            aggregatedFilter
         )
 
         val jsonString = Json.encodeToString(report)
@@ -332,9 +328,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     private fun formatInstant(timestamp: Long): String {
-        val instant = Instant.ofEpochMilli(timestamp)
-        val formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault())
-        return formatter.format(instant)
+        return ReportGenerator.formatInstant(timestamp)
     }
 
 
