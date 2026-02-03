@@ -101,6 +101,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
+        setIntent(intent)
         handleIntent(intent)
     }
 
@@ -171,7 +172,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
             currentTask = task
             taskProcessor = AggregationTaskProcessor((application as MainApplication).boxStore)
-            val taskEntity = TaskEntity(json = jsonContent)
+            val taskEntity = TaskEntity(id = TASK_ENTITY_ID, json = jsonContent)
             taskBox.put(taskEntity) // This will overwrite the existing task with ID 1
             Toast.makeText(this, "Task loaded: ${task.id}", Toast.LENGTH_SHORT).show()
             showSuccessFeedback()
