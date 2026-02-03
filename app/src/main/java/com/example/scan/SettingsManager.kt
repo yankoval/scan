@@ -26,10 +26,20 @@ class SettingsManager(private val context: Context) {
         return sharedPreferences.getString(KEY_DEFAULT_CAMERA, null) ?: loadSettingsFromAssets().default_camera
     }
 
+    fun getAggregateCodeFilterTemplate(): String {
+        return sharedPreferences.getString(KEY_AGGREGATE_CODE_FILTER_TEMPLATE, null) ?: loadSettingsFromAssets().aggregateCodeFilterTemplate
+    }
+
+    fun getAggregatedCodeFilterTemplate(): String {
+        return sharedPreferences.getString(KEY_AGGREGATED_CODE_FILTER_TEMPLATE, null) ?: loadSettingsFromAssets().aggregatedCodeFilterTemplate
+    }
+
     private fun saveSettings(settings: Settings) {
         sharedPreferences.edit()
             .putString(KEY_SERVICE_URL, settings.serviceUrl)
             .putString(KEY_DEFAULT_CAMERA, settings.default_camera)
+            .putString(KEY_AGGREGATE_CODE_FILTER_TEMPLATE, settings.aggregateCodeFilterTemplate)
+            .putString(KEY_AGGREGATED_CODE_FILTER_TEMPLATE, settings.aggregatedCodeFilterTemplate)
             .apply()
     }
 
@@ -64,17 +74,29 @@ class SettingsManager(private val context: Context) {
             val jsonString = context.assets.open("settings.json").bufferedReader().use { it.readText() }
             json.decodeFromString<Settings>(jsonString)
         } catch (e: IOException) {
-            e.printStackTrace()
-            Settings("https://api.example.com/scandata", "standard") // Hardcoded fallback
+            Log.e(TAG, "Error loading settings from assets", e)
+            Settings(
+                serviceUrl = "https://api.example.com/scandata",
+                default_camera = "standard",
+                aggregateCodeFilterTemplate = "^]C1",
+                aggregatedCodeFilterTemplate = "^\\u001d"
+            ) // Hardcoded fallback
         }
     }
 
     companion object {
         private const val KEY_SERVICE_URL = "service_url"
         private const val KEY_DEFAULT_CAMERA = "default_camera"
+        private const val KEY_AGGREGATE_CODE_FILTER_TEMPLATE = "aggregate_code_filter_template"
+        private const val KEY_AGGREGATED_CODE_FILTER_TEMPLATE = "aggregated_code_filter_template"
         private const val TAG = "SettingsManager"
     }
 }
 
 @Serializable
-private data class Settings(val serviceUrl: String, val default_camera: String)
+private data class Settings(
+    val serviceUrl: String,
+    val default_camera: String,
+    val aggregateCodeFilterTemplate: String = "^]C1",
+    val aggregatedCodeFilterTemplate: String = "^\\u001d"
+)
