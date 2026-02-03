@@ -62,7 +62,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private lateinit var settingsManager: SettingsManager
     internal var currentTask: Task? = null
     private lateinit var taskBox: Box<TaskEntity>
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
     var taskProcessor: ITaskProcessor? = null
         private set
 
@@ -120,26 +123,24 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     private fun readTextFromUri(uri: Uri): String {
-        contentResolver.openInputStream(uri)?.use { inputStream ->
-            val bufferedInputStream = java.io.BufferedInputStream(inputStream)
-            bufferedInputStream.mark(3)
-            val bom = ByteArray(3)
-            // Try to read the first 3 bytes
-            val bytesRead = bufferedInputStream.read(bom, 0, 3)
-
-            // Check if the read bytes form a UTF-8 BOM.
-            // If not, reset the stream to the beginning.
-            if (bytesRead < 3 || !(bom[0] == 0xEF.toByte() && bom[1] == 0xBB.toByte() && bom[2] == 0xBF.toByte())) {
-                bufferedInputStream.reset()
-            }
-            // Now, the stream is positioned correctly (after BOM or at the start).
-            // Read the rest of the stream as a UTF-8 string.
-            return bufferedInputStream.reader(Charsets.UTF_8).readText()
+        return try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                val bytes = inputStream.readBytes()
+                if (bytes.size >= 3 && bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte()) {
+                    String(bytes, 3, bytes.size - 3, Charsets.UTF_8)
+                } else {
+                    String(bytes, Charsets.UTF_8)
+                }
+            } ?: ""
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to read text from URI", e)
+            ""
         }
-        return ""
     }
     private fun loadTask() {
-        val taskEntity = taskBox.get(TASK_ENTITY_ID)
+        val allTasks = taskBox.all
+        val taskEntity = allTasks.find { it.id == TASK_ENTITY_ID } ?: allTasks.firstOrNull()
+
         if (taskEntity != null) {
             try {
                 currentTask = json.decodeFromString<Task>(taskEntity.json)
@@ -147,7 +148,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 updateUiForTaskMode()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse stored task JSON", e)
-                taskBox.remove(TASK_ENTITY_ID)
+                // If it's the specific entity with TASK_ENTITY_ID, we might want to remove it
+                if (taskEntity.id == TASK_ENTITY_ID) {
+                    taskBox.remove(TASK_ENTITY_ID)
+                }
                 currentTask = null
                 taskProcessor = null
             }
@@ -160,9 +164,14 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
     private fun processJsonContent(jsonContent: String) {
         var isFileProcessed = false
+        val trimmedContent = jsonContent.trim()
+        if (trimmedContent.isEmpty()) return
+
+        var taskParseError: String? = null
+
         // First, try to parse as a Task file, as it's more specific
         try {
-            val task = json.decodeFromString<Task>(jsonContent)
+            val task = json.decodeFromString<Task>(trimmedContent)
             Log.d(TAG, "Parsed task: $task")
 
             if (currentTask != null) {
@@ -172,7 +181,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
             currentTask = task
             taskProcessor = AggregationTaskProcessor((application as MainApplication).boxStore)
-            val taskEntity = TaskEntity(id = TASK_ENTITY_ID, json = jsonContent)
+            val taskEntity = TaskEntity(id = TASK_ENTITY_ID, json = trimmedContent)
             taskBox.put(taskEntity) // This will overwrite the existing task with ID 1
             Toast.makeText(this, "Task loaded: ${task.id}", Toast.LENGTH_SHORT).show()
             showSuccessFeedback()
@@ -180,6 +189,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         } catch (e: Exception) {
             // It's not a task file, or it's invalid. Log the full error for debugging.
             Log.e(TAG, "Could not parse JSON as a Task", e)
+            taskParseError = e.message
         }
 
         // If not processed as a task, try to parse as a settings file
@@ -203,7 +213,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             updateUiForTaskMode()
         } else {
             Log.e(TAG, "Failed to parse JSON content as Task or Settings")
-            Toast.makeText(this, "Invalid file format", Toast.LENGTH_SHORT).show()
+            val errorMessage = if (taskParseError != null) "Invalid file format: $taskParseError" else "Invalid file format"
+            Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
         }
     }
 
