@@ -5,6 +5,6 @@ import io.objectbox.annotation.Id
 
 @Entity
 data class TaskEntity(
-    @Id var id: Long = 0,
+    @Id(assignable = true) var id: Long = 0,
     var json: String = ""
 )
