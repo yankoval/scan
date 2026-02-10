@@ -1,6 +1,7 @@
 package com.example.scan
 
 import android.Manifest
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.PointF
@@ -12,6 +13,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Size
 import android.view.MotionEvent
 import android.view.WindowManager
@@ -336,6 +340,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         val jsonString = Json.encodeToString(report)
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val fileName = "aggregation_report_$timeStamp.json"
+
+        saveToDownloads(jsonString, fileName)
         shareFile(jsonString, fileName, "application/json", "Export Aggregation Report")
     }
 
@@ -344,6 +350,44 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
 
+
+    private fun saveToDownloads(content: String, fileName: String): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val resolver = contentResolver
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                }
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                uri?.let {
+                    var success = false
+                    resolver.openOutputStream(it)?.use { outputStream ->
+                        outputStream.write(content.toByteArray())
+                        success = true
+                    }
+                    if (success) {
+                        Toast.makeText(this, R.string.report_saved_to_downloads, Toast.LENGTH_SHORT).show()
+                    }
+                    success
+                } ?: false
+            } else {
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                val file = File(downloadsDir, fileName)
+                FileOutputStream(file).use {
+                    it.write(content.toByteArray())
+                }
+                Toast.makeText(this, R.string.report_saved_to_downloads, Toast.LENGTH_SHORT).show()
+                true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Ошибка при сохранении в Загрузки", e)
+            Toast.makeText(this, R.string.error_saving_report_locally, Toast.LENGTH_SHORT).show()
+            false
+        }
+    }
 
     private fun shareFile(content: String, fileName: String, mimeType: String, chooserTitle: String) {
         try {
@@ -560,6 +604,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         private val REQUIRED_PERMISSIONS =
             mutableListOf(
                 Manifest.permission.CAMERA
-            ).toTypedArray()
+            ).apply {
+                if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.P) {
+                    add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
+            }.toTypedArray()
     }
 }
