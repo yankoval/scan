@@ -34,12 +34,17 @@ class SettingsManager(private val context: Context) {
         return sharedPreferences.getString(KEY_AGGREGATED_CODE_FILTER_TEMPLATE, null) ?: loadSettingsFromAssets().aggregatedCodeFilterTemplate
     }
 
+    fun getCoolingPeriodMs(): Long {
+        return sharedPreferences.getLong(KEY_COOLING_PERIOD_MS, 500L)
+    }
+
     private fun saveSettings(settings: Settings) {
         sharedPreferences.edit()
             .putString(KEY_SERVICE_URL, settings.serviceUrl)
             .putString(KEY_DEFAULT_CAMERA, settings.default_camera)
             .putString(KEY_AGGREGATE_CODE_FILTER_TEMPLATE, settings.aggregateCodeFilterTemplate)
             .putString(KEY_AGGREGATED_CODE_FILTER_TEMPLATE, settings.aggregatedCodeFilterTemplate)
+            .putLong(KEY_COOLING_PERIOD_MS, settings.coolingPeriodMs)
             .apply()
     }
 
@@ -79,7 +84,8 @@ class SettingsManager(private val context: Context) {
                 serviceUrl = "https://api.example.com/scandata",
                 default_camera = "standard",
                 aggregateCodeFilterTemplate = "^]C1",
-                aggregatedCodeFilterTemplate = "^\\u001d"
+                aggregatedCodeFilterTemplate = "^\\u001d",
+                coolingPeriodMs = 500L
             ) // Hardcoded fallback
         }
     }
@@ -89,6 +95,7 @@ class SettingsManager(private val context: Context) {
         private const val KEY_DEFAULT_CAMERA = "default_camera"
         private const val KEY_AGGREGATE_CODE_FILTER_TEMPLATE = "aggregate_code_filter_template"
         private const val KEY_AGGREGATED_CODE_FILTER_TEMPLATE = "aggregated_code_filter_template"
+        private const val KEY_COOLING_PERIOD_MS = "cooling_period_ms"
         private const val TAG = "SettingsManager"
     }
 }
@@ -98,5 +105,6 @@ private data class Settings(
     val serviceUrl: String,
     val default_camera: String,
     val aggregateCodeFilterTemplate: String = "^]C1",
-    val aggregatedCodeFilterTemplate: String = "^\\u001d"
+    val aggregatedCodeFilterTemplate: String = "^\\u001d",
+    val coolingPeriodMs: Long = 500L
 )
