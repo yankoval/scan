@@ -36,6 +36,11 @@ class BarcodeScannerProcessor(
     private val activeGraphics = mutableMapOf<String, BarcodeGraphic>()
     private val GRAPHIC_LIFETIME_MS = 300L
 
+    private var lastBufferCodes: Set<String> = emptySet()
+    private var lastBufferChangeTime: Long = 0
+    private var isCheckTriggered: Boolean = false
+    private val settingsManager = SettingsManager(context)
+
     private val options = BarcodeScannerOptions.Builder()
         .setBarcodeFormats(
             Barcode.FORMAT_QR_CODE,
@@ -156,6 +161,7 @@ class BarcodeScannerProcessor(
 
     private fun updateAndRedrawGraphics(currentTask: com.example.scan.model.Task?) {
         val currentTime = System.currentTimeMillis()
+        val coolingPeriodMs = settingsManager.getCoolingPeriodMs()
 
         // Remove old graphics that haven't been seen for a while
         val iterator = activeGraphics.iterator()
@@ -176,21 +182,32 @@ class BarcodeScannerProcessor(
         (context as? MainActivity)?.taskProcessor?.let { processor ->
             currentTask?.let { task ->
                 val allCodes = scannedCodeBox.all
-                val expectedCodeCount = (task.numPacksInBox ?: 0) + 1
-                if (allCodes.size >= expectedCodeCount) {
-                    when (val result = processor.check(allCodes, task)) {
-                        is CheckResult.Success -> {
-                            Log.d("BarcodeScanner", "Task check successful!")
-                            listener.onCheckSucceeded()
-                            invalidCodes = emptySet()
-                            scannedCodeBox.removeAll()
-                            allCodes.forEach { activeGraphics.remove(it.code) }
-                        }
-                        is CheckResult.Failure -> {
-                            Log.w("BarcodeScanner", "Task check failed: ${result.reason}")
-                            listener.onCheckFailed(result.reason)
-                            invalidCodes = result.invalidCodes
-                            scannedCodeBox.removeAll()
+                val currentCodes = allCodes.map { it.code }.toSet()
+
+                if (currentCodes != lastBufferCodes) {
+                    lastBufferCodes = currentCodes
+                    lastBufferChangeTime = currentTime
+                    isCheckTriggered = false
+                } else if (!isCheckTriggered && currentCodes.isNotEmpty()) {
+                    if (currentTime - lastBufferChangeTime >= coolingPeriodMs) {
+                        isCheckTriggered = true
+                        val expectedCodeCount = (task.numPacksInBox ?: 0) + 1
+                        when (val result = processor.check(allCodes, task)) {
+                            is CheckResult.Success -> {
+                                Log.d("BarcodeScanner", "Task check successful!")
+                                listener.onCheckSucceeded()
+                                invalidCodes = emptySet()
+                                scannedCodeBox.removeAll()
+                                allCodes.forEach { activeGraphics.remove(it.code) }
+                            }
+                            is CheckResult.Failure -> {
+                                Log.w("BarcodeScanner", "Task check failed: ${result.reason}")
+                                listener.onCheckFailed(result.reason)
+                                invalidCodes = result.invalidCodes
+                                if (allCodes.size >= expectedCodeCount) {
+                                    scannedCodeBox.removeAll()
+                                }
+                            }
                         }
                     }
                 }
