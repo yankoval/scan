@@ -88,21 +88,11 @@ class BarcodeScannerProcessor(
     }
     private fun handleBarcodes(barcodes: List<Barcode>, currentTask: com.example.scan.model.Task?, imageProxy: ImageProxy) {
         val currentTime = System.currentTimeMillis()
-        val codesInFrame = mutableSetOf<String>()
 
         // Process all barcodes detected in the current frame
         for (barcode in barcodes) {
             val rawValue = barcode.rawValue ?: continue
-            codesInFrame.add(rawValue)
 
-            // If the graphic is already active, just update its timestamp
-            if (activeGraphics.containsKey(rawValue)) {
-                activeGraphics[rawValue]?.lastSeenTimestamp = currentTime
-                continue
-            }
-
-            // New barcode detected, process and create a graphic for it
-            val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
             val (contentType, gs1DataList) = checkLogic(rawValue)
 
             val isDuplicateInAggregation = when (contentType) {
@@ -124,6 +114,29 @@ class BarcodeScannerProcessor(
                 }
             }
 
+            val isInvalid = invalidCodes.contains(rawValue)
+            val isDuplicate = isDuplicateInAggregation || isInvalid
+
+            // Update or create graphic for the barcode
+            val existingGraphic = activeGraphics[rawValue]
+            if (existingGraphic != null) {
+                existingGraphic.barcode = barcode
+                existingGraphic.isDuplicate = isDuplicate
+                existingGraphic.isMismatched = isMismatched
+                existingGraphic.lastSeenTimestamp = currentTime
+            } else {
+                val newGraphic = BarcodeGraphic(
+                    overlay = graphicOverlay,
+                    barcode = barcode,
+                    isDuplicate = isDuplicate,
+                    isMismatched = isMismatched,
+                    lastSeenTimestamp = currentTime
+                )
+                activeGraphics[rawValue] = newGraphic
+            }
+
+            // Only add to buffer if it's a new valid code
+            val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
             if (existingCode == null && !isDuplicateInAggregation && !isMismatched) {
                 val scannedCode = ScannedCode(
                     code = rawValue,
@@ -135,17 +148,6 @@ class BarcodeScannerProcessor(
                 scannedCodeBox.put(scannedCode)
                 Log.d("BarcodeScanner", "Scanned new code: $rawValue, Type: $contentType")
             }
-
-            // Create a new graphic
-            val isInvalid = invalidCodes.contains(rawValue)
-            val newGraphic = BarcodeGraphic(
-                overlay = graphicOverlay,
-                barcode = barcode,
-                isDuplicate = isDuplicateInAggregation || isInvalid,
-                isMismatched = isMismatched,
-                lastSeenTimestamp = currentTime
-            )
-            activeGraphics[rawValue] = newGraphic
         }
 
         // Trigger auto-focus for the first barcode in the frame

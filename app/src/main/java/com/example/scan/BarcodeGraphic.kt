@@ -8,7 +8,7 @@ import com.google.mlkit.vision.barcode.common.Barcode
 
 class BarcodeGraphic(
     overlay: GraphicOverlay,
-    val barcode: Barcode,
+    var barcode: Barcode,
     var isDuplicate: Boolean = false,
     var isMismatched: Boolean = false,
     var lastSeenTimestamp: Long = System.currentTimeMillis()
