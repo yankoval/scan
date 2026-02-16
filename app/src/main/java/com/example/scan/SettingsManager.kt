@@ -35,7 +35,11 @@ class SettingsManager(private val context: Context) {
     }
 
     fun getCoolingPeriodMs(): Long {
-        return sharedPreferences.getLong(KEY_COOLING_PERIOD_MS, 500L)
+        return if (sharedPreferences.contains(KEY_COOLING_PERIOD_MS)) {
+            sharedPreferences.getLong(KEY_COOLING_PERIOD_MS, 500L)
+        } else {
+            loadSettingsFromAssets().coolingPeriodMs
+        }
     }
 
     private fun saveSettings(settings: Settings) {

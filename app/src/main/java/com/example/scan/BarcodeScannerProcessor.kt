@@ -189,23 +189,25 @@ class BarcodeScannerProcessor(
                     lastBufferChangeTime = currentTime
                     isCheckTriggered = false
                 } else if (!isCheckTriggered && currentCodes.isNotEmpty()) {
-                    if (currentTime - lastBufferChangeTime >= coolingPeriodMs) {
-                        isCheckTriggered = true
-                        val expectedCodeCount = (task.numPacksInBox ?: 0) + 1
-                        when (val result = processor.check(allCodes, task)) {
-                            is CheckResult.Success -> {
-                                Log.d("BarcodeScanner", "Task check successful!")
-                                listener.onCheckSucceeded()
-                                invalidCodes = emptySet()
-                                scannedCodeBox.removeAll()
-                                allCodes.forEach { activeGraphics.remove(it.code) }
-                            }
-                            is CheckResult.Failure -> {
-                                Log.w("BarcodeScanner", "Task check failed: ${result.reason}")
-                                listener.onCheckFailed(result.reason)
-                                invalidCodes = result.invalidCodes
-                                if (allCodes.size >= expectedCodeCount) {
+                    val expectedCodeCount = task.numPacksInBox + 1
+                    if (allCodes.size >= expectedCodeCount) {
+                        if (currentTime - lastBufferChangeTime >= coolingPeriodMs) {
+                            isCheckTriggered = true
+                            when (val result = processor.check(allCodes, task)) {
+                                is CheckResult.Success -> {
+                                    Log.d("BarcodeScanner", "Task check successful!")
+                                    listener.onCheckSucceeded()
+                                    invalidCodes = emptySet()
                                     scannedCodeBox.removeAll()
+                                    allCodes.forEach { activeGraphics.remove(it.code) }
+                                }
+                                is CheckResult.Failure -> {
+                                    Log.w("BarcodeScanner", "Task check failed: ${result.reason}")
+                                    listener.onCheckFailed(result.reason)
+                                    invalidCodes = result.invalidCodes
+                                    if (allCodes.size >= expectedCodeCount) {
+                                        scannedCodeBox.removeAll()
+                                    }
                                 }
                             }
                         }
