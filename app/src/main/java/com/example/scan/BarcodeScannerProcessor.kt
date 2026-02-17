@@ -187,7 +187,8 @@ class BarcodeScannerProcessor(
                     isCheckTriggered = false
                 } else if (!isCheckTriggered && currentCodes.isNotEmpty()) {
                     val expectedCodeCount = (task.numPacksInBox ?: 0) + 1
-                    if (currentCodes.size >= expectedCodeCount && currentTime - lastBufferChangeTime >= coolingPeriodMs) {
+                    val hasSscc = allCodes.any { it.contentType == "GS1_SSCC" }
+                    if (currentCodes.size >= expectedCodeCount && hasSscc && currentTime - lastBufferChangeTime >= coolingPeriodMs) {
                         isCheckTriggered = true
                         when (val result = processor.check(allCodes, task)) {
                             is CheckResult.Success -> {
