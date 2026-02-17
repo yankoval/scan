@@ -31,7 +31,6 @@ class BarcodeScannerProcessor(
     private val scannedCodeBox: Box<ScannedCode> = boxStore.boxFor(ScannedCode::class.java)
     private val aggregatedCodeBox: Box<AggregatedCode> = boxStore.boxFor(AggregatedCode::class.java)
     private val aggregatePackageBox: Box<AggregatePackage> = boxStore.boxFor(AggregatePackage::class.java)
-    private var lastSuccessfulScanTime: Long = 0
     private var invalidCodes = emptySet<String>()
     private val activeGraphics = mutableMapOf<String, BarcodeGraphic>()
     private val GRAPHIC_LIFETIME_MS = 300L
@@ -69,11 +68,7 @@ class BarcodeScannerProcessor(
                 .addOnSuccessListener { barcodes ->
                     if (barcodes.isNotEmpty()) {
                         inactivityHandler.removeCallbacks(inactivityRunnable)
-                        val currentTime = System.currentTimeMillis()
-                        if (currentTime - lastSuccessfulScanTime > 100) {
-                            lastSuccessfulScanTime = currentTime
-                            handleBarcodes(barcodes, currentTask, imageProxy)
-                        }
+                        handleBarcodes(barcodes, currentTask, imageProxy)
                         inactivityHandler.postDelayed(inactivityRunnable, 3000)
                     }
                 }
@@ -191,9 +186,9 @@ class BarcodeScannerProcessor(
                     lastBufferChangeTime = currentTime
                     isCheckTriggered = false
                 } else if (!isCheckTriggered && currentCodes.isNotEmpty()) {
-                    if (currentTime - lastBufferChangeTime >= coolingPeriodMs) {
+                    val expectedCodeCount = (task.numPacksInBox ?: 0) + 1
+                    if (currentCodes.size >= expectedCodeCount && currentTime - lastBufferChangeTime >= coolingPeriodMs) {
                         isCheckTriggered = true
-                        val expectedCodeCount = (task.numPacksInBox ?: 0) + 1
                         when (val result = processor.check(allCodes, task)) {
                             is CheckResult.Success -> {
                                 Log.d("BarcodeScanner", "Task check successful!")
