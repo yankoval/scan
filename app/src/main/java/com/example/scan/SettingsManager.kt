@@ -38,6 +38,10 @@ class SettingsManager(private val context: Context) {
         return sharedPreferences.getLong(KEY_COOLING_PERIOD_MS, 500L)
     }
 
+    fun isSaveImagesEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_SAVE_IMAGES, loadSettingsFromAssets().saveImages)
+    }
+
     private fun saveSettings(settings: Settings) {
         sharedPreferences.edit()
             .putString(KEY_SERVICE_URL, settings.serviceUrl)
@@ -45,6 +49,7 @@ class SettingsManager(private val context: Context) {
             .putString(KEY_AGGREGATE_CODE_FILTER_TEMPLATE, settings.aggregateCodeFilterTemplate)
             .putString(KEY_AGGREGATED_CODE_FILTER_TEMPLATE, settings.aggregatedCodeFilterTemplate)
             .putLong(KEY_COOLING_PERIOD_MS, settings.coolingPeriodMs)
+            .putBoolean(KEY_SAVE_IMAGES, settings.saveImages)
             .apply()
     }
 
@@ -85,7 +90,8 @@ class SettingsManager(private val context: Context) {
                 default_camera = "standard",
                 aggregateCodeFilterTemplate = "^]C1",
                 aggregatedCodeFilterTemplate = "^\\u001d",
-                coolingPeriodMs = 500L
+                coolingPeriodMs = 500L,
+                saveImages = true
             ) // Hardcoded fallback
         }
     }
@@ -96,6 +102,7 @@ class SettingsManager(private val context: Context) {
         private const val KEY_AGGREGATE_CODE_FILTER_TEMPLATE = "aggregate_code_filter_template"
         private const val KEY_AGGREGATED_CODE_FILTER_TEMPLATE = "aggregated_code_filter_template"
         private const val KEY_COOLING_PERIOD_MS = "cooling_period_ms"
+        private const val KEY_SAVE_IMAGES = "save_images"
         private const val TAG = "SettingsManager"
     }
 }
@@ -106,5 +113,6 @@ private data class Settings(
     val default_camera: String,
     val aggregateCodeFilterTemplate: String = "^]C1",
     val aggregatedCodeFilterTemplate: String = "^\\u001d",
-    val coolingPeriodMs: Long = 500L
+    val coolingPeriodMs: Long = 500L,
+    val saveImages: Boolean = true
 )
