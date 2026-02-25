@@ -83,6 +83,8 @@ class BarcodeScannerProcessor(
     }
     private fun handleBarcodes(barcodes: List<Barcode>, currentTask: com.example.scan.model.Task?, imageProxy: ImageProxy) {
         val currentTime = System.currentTimeMillis()
+        var newCodeFoundInFrame = false
+        var firstNewCode: String? = null
 
         // Process all barcodes detected in the current frame
         for (barcode in barcodes) {
@@ -142,7 +144,16 @@ class BarcodeScannerProcessor(
                 )
                 scannedCodeBox.put(scannedCode)
                 Log.d("BarcodeScanner", "Scanned new code: $rawValue, Type: $contentType")
+
+                if (!newCodeFoundInFrame) {
+                    newCodeFoundInFrame = true
+                    firstNewCode = rawValue
+                }
             }
+        }
+
+        if (newCodeFoundInFrame && firstNewCode != null && settingsManager.isSaveImagesEnabled()) {
+            listener.onNewCodeScanned(firstNewCode, imageProxy)
         }
 
         // Trigger auto-focus for the first barcode in the frame
@@ -283,6 +294,7 @@ class BarcodeScannerProcessor(
         fun onBarcodeCountUpdated(totalCount: Long)
         fun onCheckSucceeded()
         fun onCheckFailed(reason: String)
+        fun onNewCodeScanned(firstCode: String, imageProxy: ImageProxy)
     }
 
     fun close() {
