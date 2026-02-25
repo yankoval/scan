@@ -2,13 +2,16 @@ package com.example.scan.utility
 
 import android.content.ContentResolver
 import android.content.ContentValues
+import android.graphics.Bitmap
 import android.graphics.ImageFormat
+import android.graphics.Matrix
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
+import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.util.Arrays
 
@@ -51,25 +54,74 @@ object ImageUtility {
         try {
             val startTime = System.currentTimeMillis()
 
-            // 1. Prepare NV21 for YuvImage (grayscale by setting U/V to 128)
-            val nv21 = ByteArray(width * height * 3 / 2)
-            System.arraycopy(yBytes, 0, nv21, 0, width * height)
-            Arrays.fill(nv21, width * height, nv21.size, 128.toByte())
+            // 1. Create Bitmap from Y plane
+            val pixels = IntArray(width * height)
+            for (i in 0 until width * height) {
+                val y = yBytes[i].toInt() and 0xFF
+                pixels[i] = (0xFF shl 24) or (y shl 16) or (y shl 8) or y
+            }
+            var bitmap = Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
 
-            val yuvImage = YuvImage(nv21, ImageFormat.NV21, width, height, null)
+            // 2. Rotate and downscale
+            // Start with a reasonable resolution that can potentially fit in 15kB
+            val maxDimension = 1024
+            val scale = maxDimension.toFloat() / maxOf(width, height).coerceAtLeast(1)
 
-            // 2. Prepare filename
+            val matrix = Matrix()
+            if (scale < 1.0f) {
+                matrix.postScale(scale, scale)
+            }
+            if (rotationDegrees != 0) {
+                matrix.postRotate(rotationDegrees.toFloat())
+            }
+
+            if (!matrix.isIdentity) {
+                val scaledBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true)
+                if (scaledBitmap != bitmap) {
+                    bitmap.recycle()
+                    bitmap = scaledBitmap
+                }
+            }
+
+            // 3. Iteratively compress to reach < 15 kB
+            val targetSize = 15 * 1024
+            var quality = 80
+            var bos = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, quality, bos)
+
+            while (bos.size() > targetSize && (quality > 10 || bitmap.width > 320)) {
+                if (quality > 10) {
+                    quality -= 10
+                } else {
+                    // If even at low quality it's too big, downscale further
+                    val furtherScale = 0.8f
+                    val nextWidth = (bitmap.width * furtherScale).toInt()
+                    val nextHeight = (bitmap.height * furtherScale).toInt()
+                    if (nextWidth < 100 || nextHeight < 100) break // Don't go too small
+
+                    val smallerBitmap = Bitmap.createScaledBitmap(bitmap, nextWidth, nextHeight, true)
+                    bitmap.recycle()
+                    bitmap = smallerBitmap
+                    quality = 60 // Try with moderate quality on smaller image
+                }
+                bos = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, quality, bos)
+            }
+
+            val jpegBytes = bos.toByteArray()
+
+            // 4. Prepare filename
             val timestamp = System.currentTimeMillis()
             val cleanTaskId = taskId?.replace(Regex("[\\\\/:*?\"<>|]"), "_") ?: "no_task"
             val cleanCode = firstCode.replace(Regex("[\\\\/:*?\"<>|]"), "_")
             val fileName = "${cleanTaskId}_${cleanCode}_${timestamp}.jpg"
 
-            // 3. Save to MediaStore
+            // 5. Save to MediaStore
             val relativePath = Environment.DIRECTORY_PICTURES + "/ScanImages"
             val contentValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
                 put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                put(MediaStore.Images.Media.ORIENTATION, rotationDegrees)
+                put(MediaStore.Images.Media.ORIENTATION, 0) // Already rotated
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
                     put(MediaStore.Images.Media.IS_PENDING, 1)
@@ -79,7 +131,7 @@ object ImageUtility {
             val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
             if (uri != null) {
                 contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    yuvImage.compressToJpeg(Rect(0, 0, width, height), 70, outputStream)
+                    outputStream.write(jpegBytes)
                 }
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -87,13 +139,15 @@ object ImageUtility {
                     contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
                     contentResolver.update(uri, contentValues, null, null)
                 }
-                Log.d(TAG, "Image saved: $fileName in ${System.currentTimeMillis() - startTime}ms")
+                Log.d(TAG, "Image saved: $fileName, size: ${jpegBytes.size} bytes in ${System.currentTimeMillis() - startTime}ms")
 
-                // 4. Apply retention policy
+                // 6. Apply retention policy
                 applyRetentionPolicy(contentResolver)
             } else {
                 Log.e(TAG, "Failed to create MediaStore entry for $fileName")
             }
+
+            bitmap.recycle()
 
         } catch (e: Exception) {
             Log.e(TAG, "Error saving grayscale image", e)
