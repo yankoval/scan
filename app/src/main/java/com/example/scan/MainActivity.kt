@@ -559,13 +559,13 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
         ioExecutor.execute {
             ImageUtility.saveGrayscaleImage(
+                this,
                 yBytes,
                 width,
                 height,
                 rotationDegrees,
                 taskId,
-                firstCode,
-                contentResolver
+                firstCode
             )
         }
     }

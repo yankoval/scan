@@ -1,19 +1,13 @@
 package com.example.scan.utility
 
-import android.content.ContentResolver
-import android.content.ContentValues
+import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.ImageFormat
 import android.graphics.Matrix
-import android.graphics.Rect
-import android.graphics.YuvImage
-import android.os.Build
 import android.os.Environment
-import android.provider.MediaStore
 import android.util.Log
 import java.io.ByteArrayOutputStream
-import java.io.OutputStream
-import java.util.Arrays
+import java.io.File
+import java.io.FileOutputStream
 
 object ImageUtility {
     private const val TAG = "ImageUtility"
@@ -43,13 +37,13 @@ object ImageUtility {
     }
 
     fun saveGrayscaleImage(
+        context: Context,
         yBytes: ByteArray,
         width: Int,
         height: Int,
         rotationDegrees: Int,
         taskId: String?,
-        firstCode: String,
-        contentResolver: ContentResolver
+        firstCode: String
     ) {
         try {
             val startTime = System.currentTimeMillis()
@@ -116,36 +110,19 @@ object ImageUtility {
             val cleanCode = firstCode.replace(Regex("[\\\\/:*?\"<>|]"), "_")
             val fileName = "${cleanTaskId}_${cleanCode}_${timestamp}.jpg"
 
-            // 5. Save to MediaStore
-            val relativePath = Environment.DIRECTORY_PICTURES + "/ScanImages"
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                put(MediaStore.Images.Media.ORIENTATION, 0) // Already rotated
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
-                    put(MediaStore.Images.Media.IS_PENDING, 1)
-                }
+            // 5. Save to Private External Storage
+            val directory = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "ScanImages")
+            if (!directory.exists()) {
+                directory.mkdirs()
             }
-
-            val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-            if (uri != null) {
-                contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    outputStream.write(jpegBytes)
-                }
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    contentValues.clear()
-                    contentValues.put(MediaStore.Images.Media.IS_PENDING, 0)
-                    contentResolver.update(uri, contentValues, null, null)
-                }
-                Log.d(TAG, "Image saved: $fileName, size: ${jpegBytes.size} bytes in ${System.currentTimeMillis() - startTime}ms")
-
-                // 6. Apply retention policy
-                applyRetentionPolicy(contentResolver)
-            } else {
-                Log.e(TAG, "Failed to create MediaStore entry for $fileName")
+            val file = File(directory, fileName)
+            FileOutputStream(file).use { outputStream ->
+                outputStream.write(jpegBytes)
             }
+            Log.d(TAG, "Image saved: ${file.absolutePath}, size: ${jpegBytes.size} bytes in ${System.currentTimeMillis() - startTime}ms")
+
+            // 6. Apply retention policy
+            applyRetentionPolicy(directory)
 
             bitmap.recycle()
 
@@ -154,63 +131,29 @@ object ImageUtility {
         }
     }
 
-    private fun applyRetentionPolicy(contentResolver: ContentResolver) {
+    private fun applyRetentionPolicy(directory: File) {
         try {
-            val projection = arrayOf(
-                MediaStore.Images.Media._ID,
-                MediaStore.Images.Media.SIZE,
-                MediaStore.Images.Media.DATE_ADDED
-            )
-
-            // Filter for files in our specific folder
-            val selection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
-            } else {
-                "${MediaStore.Images.Media.DATA} LIKE ?"
-            }
-            val selectionArgs = arrayOf("%ScanImages%")
-
-            val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} ASC"
-
-            val queryUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-
-            val files = mutableListOf<FileData>()
-            var totalSize = 0L
-
-            contentResolver.query(queryUri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-                val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.SIZE)
-
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(idColumn)
-                    val size = cursor.getLong(sizeColumn)
-                    files.add(FileData(id, size))
-                    totalSize += size
-                }
-            }
+            val files = directory.listFiles() ?: return
+            val sortedFiles = files.sortedBy { it.lastModified() }
+            var totalSize = sortedFiles.sumOf { it.length() }
 
             if (totalSize > MAX_FOLDER_SIZE_BYTES) {
                 Log.d(TAG, "Folder size ($totalSize) exceeds limit. Starting cleanup.")
-                var currentSize = totalSize
-                for (file in files) {
-                    val deleteUri = android.content.ContentUris.withAppendedId(queryUri, file.id)
-                    try {
-                        contentResolver.delete(deleteUri, null, null)
-                        currentSize -= file.size
-                        Log.d(TAG, "Deleted old image: ${file.id}, remaining size: $currentSize")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to delete image: ${file.id}", e)
+                for (file in sortedFiles) {
+                    val fileSize = file.length()
+                    if (file.delete()) {
+                        totalSize -= fileSize
+                        Log.d(TAG, "Deleted old image: ${file.name}, remaining size: $totalSize")
+                    } else {
+                        Log.e(TAG, "Failed to delete image: ${file.name}")
                     }
 
-                    if (currentSize <= TARGET_FOLDER_SIZE_BYTES) break
+                    if (totalSize <= TARGET_FOLDER_SIZE_BYTES) break
                 }
-                Log.d(TAG, "Cleanup finished. Final size: $currentSize")
+                Log.d(TAG, "Cleanup finished. Final size: $totalSize")
             }
-
         } catch (e: Exception) {
             Log.e(TAG, "Error applying retention policy", e)
         }
     }
-
-    private data class FileData(val id: Long, val size: Long)
 }
