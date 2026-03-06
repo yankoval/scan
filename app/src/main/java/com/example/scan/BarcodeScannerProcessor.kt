@@ -135,6 +135,15 @@ class BarcodeScannerProcessor(
             // Only add to buffer if it's a new valid code
             val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
             if (existingCode == null && !isDuplicateInAggregation && !isMismatched) {
+                // Determine if this is a "new" code for the purposes of image saving.
+                // It should be either a valid product code for the current task or a valid SSCC.
+                val isSscc = contentType == "GS1_SSCC"
+                val gs1DataMap = gs1DataList.associate {
+                    val parts = it.split(":", limit = 2)
+                    parts[0] to parts.getOrElse(1) { "" }
+                }
+                val isTaskProduct = isHonestSign(barcode, gs1DataMap, currentTask)
+
                 val scannedCode = ScannedCode(
                     code = rawValue,
                     timestamp = currentTime,
@@ -145,9 +154,12 @@ class BarcodeScannerProcessor(
                 scannedCodeBox.put(scannedCode)
                 Log.d("BarcodeScanner", "Scanned new code: $rawValue, Type: $contentType")
 
-                if (!newCodeFoundInFrame) {
-                    newCodeFoundInFrame = true
-                    firstNewCode = rawValue
+                // If it's a task product or an SSCC, we mark that a new relevant code was found.
+                if (isTaskProduct || isSscc) {
+                    if (!newCodeFoundInFrame) {
+                        newCodeFoundInFrame = true
+                        firstNewCode = rawValue
+                    }
                 }
             }
         }
