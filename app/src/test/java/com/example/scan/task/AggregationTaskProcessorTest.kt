@@ -150,4 +150,27 @@ class AggregationTaskProcessorTest {
         assertTrue(result is CheckResult.Failure)
         assertEquals("Mismatched GTIN", (result as CheckResult.Failure).reason)
     }
+
+    @Test
+    fun `check should succeed with SSCC embedded in GS1 DataMatrix`() {
+        val task = createTask("01234567890123", 1)
+        val rawSscc = "000460705179000007110" // Example provided by user
+        val extractedSscc = "046070517900000711" // 18 digits after '00'
+
+        val codes = listOf(
+            createProductCode("01234567890123", "SERIAL1"),
+            ScannedCode(
+                code = rawSscc,
+                contentType = "GS1_SSCC",
+                gs1Data = mutableListOf("00:$extractedSscc")
+            )
+        )
+
+        val result = processor.check(codes, task)
+
+        assertTrue(result is CheckResult.Success)
+        val aggregatePackageBox = store.boxFor(AggregatePackage::class.java)
+        assertEquals(1, aggregatePackageBox.count())
+        assertEquals(extractedSscc, aggregatePackageBox.all[0].sscc)
+    }
 }

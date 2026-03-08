@@ -91,7 +91,10 @@ class BarcodeScannerProcessor(
             val (contentType, gs1DataList) = checkLogic(rawValue)
 
             val isDuplicateInAggregation = when (contentType) {
-                "GS1_SSCC" -> aggregatePackageBox.query(AggregatePackage_.sscc.equal(rawValue)).build().findFirst() != null
+                "GS1_SSCC" -> {
+                    val ssccValue = gs1DataList.firstOrNull { it.startsWith("00:") }?.substring(3) ?: rawValue
+                    aggregatePackageBox.query(AggregatePackage_.sscc.equal(ssccValue)).build().findFirst() != null
+                }
                 else -> aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(rawValue)).build().findFirst() != null
             }
 
@@ -219,8 +222,8 @@ class BarcodeScannerProcessor(
             code.startsWith("]C1") || code.contains('\u001d') -> {
                 val parsedData = gs1Parser.parse(code)
                 if (parsedData.isNotEmpty()) {
-                    // Check if the content is exclusively an SSCC
-                    if (parsedData.size == 1 && parsedData.containsKey("00")) {
+                    // If it contains an SSCC (AI 00), we treat it as an SSCC code for aggregation
+                    if (parsedData.containsKey("00")) {
                         Pair("GS1_SSCC", parsedData.map { "${it.key}:${it.value}" }.toMutableList())
                     } else {
                         val contentType = if (code.contains('\u001d')) "GS1_DATAMATRIX" else "GS1_CODE128"
