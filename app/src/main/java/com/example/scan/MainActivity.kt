@@ -35,6 +35,7 @@ import androidx.core.content.FileProvider
 import com.example.scan.databinding.ActivityMainBinding
 import com.example.scan.model.*
 import com.example.scan.utility.CodeFilter
+import com.example.scan.utility.ImageUtility
 import com.example.scan.utility.ReportGenerator
 import android.view.View
 import com.example.scan.task.AggregationTaskProcessor
@@ -61,6 +62,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
     private lateinit var viewBinding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var ioExecutor: ExecutorService
     private var barcodeScannerProcessor: BarcodeScannerProcessor? = null
     private var cameraControl: CameraControl? = null
     private lateinit var settingsManager: SettingsManager
@@ -80,6 +82,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         cameraExecutor = Executors.newSingleThreadExecutor()
+        ioExecutor = Executors.newSingleThreadExecutor()
         settingsManager = SettingsManager(this)
         taskBox = (application as MainApplication).boxStore.boxFor(TaskEntity::class.java)
 
@@ -547,6 +550,26 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         }
     }
 
+    override fun onNewCodeScanned(firstCode: String, imageProxy: ImageProxy) {
+        val yBytes = ImageUtility.extractYPlane(imageProxy)
+        val width = imageProxy.width
+        val height = imageProxy.height
+        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+        val taskId = currentTask?.id
+
+        ioExecutor.execute {
+            ImageUtility.saveGrayscaleImage(
+                this,
+                yBytes,
+                width,
+                height,
+                rotationDegrees,
+                taskId,
+                firstCode
+            )
+        }
+    }
+
 
     private fun setupTapToFocus(cameraControl: CameraControl) {
         viewBinding.previewView.setOnTouchListener { _, event ->
@@ -595,6 +618,8 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         cameraExecutor.execute {
             barcodeScannerProcessor?.close()
         }
+        cameraExecutor.shutdown()
+        ioExecutor.shutdown()
     }
 
     companion object {
