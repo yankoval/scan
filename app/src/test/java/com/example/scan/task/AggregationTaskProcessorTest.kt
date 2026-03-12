@@ -154,13 +154,12 @@ class AggregationTaskProcessorTest {
     @Test
     fun `check should succeed with SSCC embedded in GS1 DataMatrix`() {
         val task = createTask("01234567890123", 1)
-        val rawSscc = "000460705179000007110" // Example provided by user
         val extractedSscc = "046070517900000711" // 18 digits after '00'
 
         val codes = listOf(
             createProductCode("01234567890123", "SERIAL1"),
             ScannedCode(
-                code = rawSscc,
+                code = extractedSscc, // In real app, BarcodeScannerProcessor filters this
                 contentType = "GS1_SSCC",
                 gs1Data = mutableListOf("00:$extractedSscc")
             )
@@ -172,5 +171,27 @@ class AggregationTaskProcessorTest {
         val aggregatePackageBox = store.boxFor(AggregatePackage::class.java)
         assertEquals(1, aggregatePackageBox.count())
         assertEquals(extractedSscc, aggregatePackageBox.all[0].sscc)
+    }
+
+    @Test
+    fun `check should succeed and use already filtered SSCC from GS1-128`() {
+        val task = createTask("01234567890123", 1)
+        val filteredSscc = "046070517900000056"
+
+        val codes = listOf(
+            createProductCode("01234567890123", "SERIAL1"),
+            ScannedCode(
+                code = filteredSscc, // In real app, BarcodeScannerProcessor filters the ]C1 prefix
+                contentType = "GS1_SSCC",
+                gs1Data = mutableListOf("00:$filteredSscc")
+            )
+        )
+
+        val result = processor.check(codes, task)
+
+        assertTrue(result is CheckResult.Success)
+        val aggregatePackageBox = store.boxFor(AggregatePackage::class.java)
+        assertEquals(1, aggregatePackageBox.count())
+        assertEquals(filteredSscc, aggregatePackageBox.all[0].sscc)
     }
 }

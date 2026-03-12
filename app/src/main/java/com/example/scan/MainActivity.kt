@@ -427,7 +427,14 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 .build()
 
             val boxStore = (application as MainApplication).boxStore
-            barcodeScannerProcessor = BarcodeScannerProcessor(viewBinding.graphicOverlay, this, this, boxStore)
+            barcodeScannerProcessor = BarcodeScannerProcessor(
+                viewBinding.graphicOverlay,
+                this,
+                this,
+                boxStore,
+                settingsManager.getAggregateCodeFilterTemplate(),
+                settingsManager.getAggregatedCodeFilterTemplate()
+            )
             imageAnalyzer.also {
                 it.setAnalyzer(cameraExecutor) { imageProxy ->
                     viewBinding.graphicOverlay.setCameraInfo(imageProxy.width, imageProxy.height, CameraSelector.LENS_FACING_BACK)

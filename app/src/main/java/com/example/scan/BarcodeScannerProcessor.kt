@@ -20,25 +20,27 @@ import com.example.scan.model.ScannedCode
 import com.example.scan.model.ScannedCode_
 import com.example.scan.task.CheckResult
 import io.objectbox.BoxStore
+import com.example.scan.utility.CodeFilter
 
 class BarcodeScannerProcessor(
     private val graphicOverlay: GraphicOverlay,
     private val context: Context,
     private val listener: OnBarcodeScannedListener,
-    private val boxStore: BoxStore
+    private val boxStore: BoxStore,
+    private val aggregateFilter: String,
+    private val aggregatedFilter: String
 ) {
 
     private val scannedCodeBox: Box<ScannedCode> = boxStore.boxFor(ScannedCode::class.java)
     private val aggregatedCodeBox: Box<AggregatedCode> = boxStore.boxFor(AggregatedCode::class.java)
     private val aggregatePackageBox: Box<AggregatePackage> = boxStore.boxFor(AggregatePackage::class.java)
-    private var invalidCodes = emptySet<String>()
+    private var invalidCodes = emptySet<String>() // Clean values
     private val activeGraphics = mutableMapOf<String, BarcodeGraphic>()
     private val GRAPHIC_LIFETIME_MS = 300L
 
     private var lastBufferCodes: Set<String> = emptySet()
     private var lastBufferChangeTime: Long = 0
     private var isCheckTriggered: Boolean = false
-    private val settingsManager = SettingsManager(context)
 
     private val options = BarcodeScannerOptions.Builder()
         .setBarcodeFormats(
@@ -90,12 +92,22 @@ class BarcodeScannerProcessor(
 
             val (contentType, gs1DataList) = checkLogic(rawValue)
 
-            val isDuplicateInAggregation = when (contentType) {
+            // 1. Extract and filter the "clean" value
+            val cleanValue = when (contentType) {
                 "GS1_SSCC" -> {
+                    // Use the 18-digit SSCC value from GS1 data if available
                     val ssccValue = gs1DataList.firstOrNull { it.startsWith("00:") }?.substring(3) ?: rawValue
-                    aggregatePackageBox.query(AggregatePackage_.sscc.equal(ssccValue)).build().findFirst() != null
+                    CodeFilter.symbologiesSymbolsFilter(ssccValue, aggregateFilter)
                 }
-                else -> aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(rawValue)).build().findFirst() != null
+                else -> {
+                    CodeFilter.symbologiesSymbolsFilter(rawValue, aggregatedFilter)
+                }
+            }
+
+            // 2. Check for duplicates using the clean value
+            val isDuplicateInAggregation = when (contentType) {
+                "GS1_SSCC" -> aggregatePackageBox.query(AggregatePackage_.sscc.equal(cleanValue)).build().findFirst() != null
+                else -> aggregatedCodeBox.query(AggregatedCode_.fullCode.equal(cleanValue)).build().findFirst() != null
             }
 
             // Determine if the code matches the current task
@@ -112,7 +124,7 @@ class BarcodeScannerProcessor(
                 }
             }
 
-            val isInvalid = invalidCodes.contains(rawValue)
+            val isInvalid = invalidCodes.contains(cleanValue)
             val isDuplicate = isDuplicateInAggregation || isInvalid
 
             // Update or create graphic for the barcode
@@ -133,18 +145,18 @@ class BarcodeScannerProcessor(
                 activeGraphics[rawValue] = newGraphic
             }
 
-            // Only add to buffer if it's a new valid code
-            val existingCode = scannedCodeBox.query(ScannedCode_.code.equal(rawValue)).build().findFirst()
-            if (existingCode == null && !isDuplicateInAggregation && !isMismatched) {
+            // 3. Only add to buffer if it's a new valid code, using clean value
+            val existingCodeInScanned = scannedCodeBox.query(ScannedCode_.code.equal(cleanValue)).build().findFirst()
+            if (existingCodeInScanned == null && !isDuplicateInAggregation && !isMismatched) {
                 val scannedCode = ScannedCode(
-                    code = rawValue,
+                    code = cleanValue,
                     timestamp = currentTime,
                     codeType = getBarcodeFormatName(barcode.format),
                     contentType = contentType,
                     gs1Data = gs1DataList.toMutableList()
                 )
                 scannedCodeBox.put(scannedCode)
-                Log.d("BarcodeScanner", "Scanned new code: $rawValue, Type: $contentType")
+                Log.d("BarcodeScanner", "Scanned new code: $cleanValue, Type: $contentType")
             }
         }
 
@@ -158,6 +170,8 @@ class BarcodeScannerProcessor(
             }
         }
     }
+
+    private val settingsManager = SettingsManager(context)
 
     private fun updateAndRedrawGraphics(currentTask: com.example.scan.model.Task?) {
         val currentTime = System.currentTimeMillis()

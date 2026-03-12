@@ -27,9 +27,8 @@ class AggregationTaskProcessor(private val boxStore: BoxStore) : ITaskProcessor 
             Timber.w(reason)
             return CheckResult.Failure(reason)
         }
-        val ssccCode = packageCodes.first()
-        val sscc = ssccCode.gs1Data.firstOrNull { it.startsWith("00:") }?.substring(3) ?: ssccCode.code
-        Timber.d("SSCC code: $sscc (raw: ${ssccCode.code})")
+        val sscc = packageCodes.first().code
+        Timber.d("SSCC code: $sscc")
 
         // 3. Check if GTINs match the task
         val taskGtin = task.gtin
