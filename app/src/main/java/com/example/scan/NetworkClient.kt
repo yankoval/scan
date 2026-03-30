@@ -4,7 +4,9 @@ import android.content.Context
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
@@ -22,6 +24,25 @@ class NetworkClient(context: Context) {
                 prettyPrint = true
                 isLenient = true
             })
+        }
+        install(HttpTimeout) {
+            requestTimeoutMillis = 10_000
+            connectTimeoutMillis = 10_000
+            socketTimeoutMillis = 10_000
+        }
+    }
+
+    suspend fun downloadFile(url: String): String? {
+        return try {
+            val response: HttpResponse = client.get(url)
+            if (response.status == HttpStatusCode.OK) {
+                response.bodyAsText()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 

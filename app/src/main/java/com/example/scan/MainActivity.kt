@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private lateinit var viewBinding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var ioExecutor: ExecutorService
+    private lateinit var networkClient: NetworkClient
     private var barcodeScannerProcessor: BarcodeScannerProcessor? = null
     private var cameraControl: CameraControl? = null
     private lateinit var settingsManager: SettingsManager
@@ -83,6 +84,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
 
         cameraExecutor = Executors.newSingleThreadExecutor()
         ioExecutor = Executors.newSingleThreadExecutor()
+        networkClient = NetworkClient(this)
         settingsManager = SettingsManager(this)
         taskBox = (application as MainApplication).boxStore.boxFor(TaskEntity::class.java)
 
@@ -118,12 +120,28 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW) {
             intent.data?.let { uri ->
-                try {
-                    val jsonContent = readTextFromUri(uri)
-                    processJsonContent(jsonContent)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error processing file URI", e)
-                    Toast.makeText(this, "Error processing file", Toast.LENGTH_SHORT).show()
+                val scheme = uri.scheme
+                if (scheme == "http" || scheme == "https") {
+                    ioExecutor.execute {
+                        val jsonContent = kotlinx.coroutines.runBlocking {
+                            networkClient.downloadFile(uri.toString())
+                        }
+                        runOnUiThread {
+                            if (jsonContent != null) {
+                                processJsonContent(jsonContent)
+                            } else {
+                                Toast.makeText(this, "Failed to download task file", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                } else {
+                    try {
+                        val jsonContent = readTextFromUri(uri)
+                        processJsonContent(jsonContent)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error processing file URI", e)
+                        Toast.makeText(this, "Error processing file", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
