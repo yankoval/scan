@@ -3,4 +3,9 @@
     <string name="barcode_count">Всего: %1$d</string>
     <string name="report_saved_to_downloads">Отчет сохранен в Загрузки</string>
     <string name="error_saving_report_locally">Ошибка при локальном сохранении отчета</string>
+    <string name="error_412_message">Отчет уже выгрузил другой пользователь, что бы не потерять данные передайте отчет по почте или мессанджеру</string>
+    <string name="error_403_message">Срок исполнения задания истек. Что бы не потерять данные отправьте их почтой или мессанджером.</string>
+    <string name="error_network_message">нет связи! Подождать? или закрыть все равно</string>
+    <string name="wait">Подождать?</string>
+    <string name="close_anyway">закрыть все равно</string>
 </resources>

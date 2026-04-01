@@ -58,4 +58,18 @@ class NetworkClient(context: Context) {
             e.printStackTrace()
         }
     }
+
+    suspend fun putReport(url: String, jsonReport: String): HttpStatusCode? {
+        return try {
+            val response: HttpResponse = client.put(url) {
+                header(HttpHeaders.IfNoneMatch, "*")
+                contentType(ContentType.Application.Json)
+                setBody(jsonReport)
+            }
+            response.status
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 }

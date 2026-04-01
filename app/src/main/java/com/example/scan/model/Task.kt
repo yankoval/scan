@@ -26,5 +26,6 @@ data class Task(
     val boxLabelFields: List<BoxLabelField>,
     val productNumbers: List<String>,
     val boxNumbers: List<String>,
-    val startTime: String = ""
+    val startTime: String = "",
+    val taskExportSignedLink: String? = null
 )

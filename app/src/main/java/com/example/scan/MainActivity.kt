@@ -21,6 +21,7 @@ import android.view.MotionEvent
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import io.ktor.http.HttpStatusCode
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.camera2.interop.Camera2CameraControl
@@ -320,33 +321,10 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
     }
 
     private fun closeTask() {
-        generateAndExportAggregationReport()
-        clearTaskData()
-    }
-
-    private fun clearTaskData() {
-        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
-        val aggregatedCodeBox: Box<AggregatedCode> = (application as MainApplication).boxStore.boxFor(AggregatedCode::class.java)
-
-        aggregatePackageBox.removeAll()
-        aggregatedCodeBox.removeAll()
-        taskBox.remove(TASK_ENTITY_ID)
-
-        currentTask = null
-        taskProcessor = null
-        Toast.makeText(this, "Task closed and data cleared", Toast.LENGTH_SHORT).show()
-        updateUiForTaskMode()
-    }
-
-    private fun generateAndExportAggregationReport() {
         val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
         val allPackages = aggregatePackageBox.all
 
-        val task = currentTask
-        if (task == null) {
-            Log.e(TAG, "Cannot generate report without an active task.")
-            return
-        }
+        val task = currentTask ?: return
 
         val aggregateFilter = settingsManager.getAggregateCodeFilterTemplate()
         val aggregatedFilter = settingsManager.getAggregatedCodeFilterTemplate()
@@ -362,8 +340,81 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val fileName = "aggregation_report_$timeStamp.json"
 
+        // 1. Always save to Downloads
         saveToDownloads(jsonString, fileName)
-        shareFile(jsonString, fileName, "application/json", "Export Aggregation Report")
+
+        val signedLink = task.taskExportSignedLink
+        if (!signedLink.isNullOrBlank()) {
+            // 2. Try to export via signed link
+            ioExecutor.execute {
+                val status = kotlinx.coroutines.runBlocking {
+                    networkClient.putReport(signedLink, jsonString)
+                }
+                runOnUiThread {
+                    handleUploadResult(status, jsonString, fileName)
+                }
+            }
+        } else {
+            // 2. Use standard share method if no signed link
+            shareFile(jsonString, fileName, "application/json", "Export Aggregation Report")
+            clearTaskData()
+        }
+    }
+
+    private fun handleUploadResult(status: HttpStatusCode?, jsonString: String, fileName: String) {
+        when (status) {
+            HttpStatusCode.OK, HttpStatusCode.Created, HttpStatusCode.NoContent -> {
+                Toast.makeText(this, "Report uploaded successfully", Toast.LENGTH_SHORT).show()
+                clearTaskData()
+            }
+            HttpStatusCode.PreconditionFailed -> {
+                // 412
+                AlertDialog.Builder(this)
+                    .setMessage(R.string.error_412_message)
+                    .setPositiveButton("OK") { _, _ ->
+                        shareFile(jsonString, fileName, "application/json", "Export Aggregation Report")
+                        clearTaskData()
+                    }
+                    .setCancelable(false)
+                    .show()
+            }
+            HttpStatusCode.Forbidden -> {
+                // 403 - Expired
+                AlertDialog.Builder(this)
+                    .setMessage(R.string.error_403_message)
+                    .setPositiveButton("OK") { _, _ ->
+                        shareFile(jsonString, fileName, "application/json", "Export Aggregation Report")
+                        clearTaskData()
+                    }
+                    .setCancelable(false)
+                    .show()
+            }
+            else -> {
+                // Other errors
+                AlertDialog.Builder(this)
+                    .setMessage(R.string.error_network_message)
+                    .setPositiveButton(R.string.wait, null)
+                    .setNegativeButton(R.string.close_anyway) { _, _ ->
+                        shareFile(jsonString, fileName, "application/json", "Export Aggregation Report")
+                        clearTaskData()
+                    }
+                    .show()
+            }
+        }
+    }
+
+    private fun clearTaskData() {
+        val aggregatePackageBox: Box<AggregatePackage> = (application as MainApplication).boxStore.boxFor(AggregatePackage::class.java)
+        val aggregatedCodeBox: Box<AggregatedCode> = (application as MainApplication).boxStore.boxFor(AggregatedCode::class.java)
+
+        aggregatePackageBox.removeAll()
+        aggregatedCodeBox.removeAll()
+        taskBox.remove(TASK_ENTITY_ID)
+
+        currentTask = null
+        taskProcessor = null
+        Toast.makeText(this, "Task closed and data cleared", Toast.LENGTH_SHORT).show()
+        updateUiForTaskMode()
     }
 
     private fun formatInstant(timestamp: Long): String {
