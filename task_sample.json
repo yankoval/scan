@@ -1,0 +1,23 @@
+{
+  "id": "TASK_123",
+  "date": "2023-10-27",
+  "lineNum": "L1",
+  "isGroup": false,
+  "gtin": "04601234567890",
+  "lotNo": "LOT001",
+  "expDate": "2024-12-31",
+  "addProdInfo": "Extra Information",
+  "numPacksInBox": 10,
+  "numLayersInBox": 2,
+  "maxNoRead": 0,
+  "urlLabelProductTemplate": "http://example.com/product_template",
+  "urlLabelBoxTemplate": "http://example.com/box_template",
+  "numLabelAtBox": 1,
+  "lengthBox": 40.5,
+  "numPacksInParcel": 50,
+  "boxLabelFields": [],
+  "productNumbers": [],
+  "boxNumbers": [],
+  "startTime": "2023-10-27T10:00:00Z",
+  "task-export-signed-link": "https://storage.yandexcloud.net/bucket/aggregation_report_TASK_123.json?X-Amz-Algorithm=AWS4-HMAC-SHA256&..."
+}
