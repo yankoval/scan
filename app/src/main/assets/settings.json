@@ -3,5 +3,6 @@
   "default_camera": "standard",
   "aggregateCodeFilterTemplate": "^]C1",
   "aggregatedCodeFilterTemplate": "^\\u001d",
-  "coolingPeriodMs": 500
+  "coolingPeriodMs": 500,
+  "showBuildInfo": true
 }

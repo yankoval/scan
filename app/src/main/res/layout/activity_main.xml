@@ -21,6 +21,20 @@
         app:layout_constraintRight_toRightOf="@id/preview_view"
         app:layout_constraintTop_toTopOf="@id/preview_view" />
 
+    <TextView
+        android:id="@+id/build_info_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:textColor="#AAAAAA"
+        android:textSize="8sp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="Build: 123 | ID: abc"
+        tools:visibility="visible" />
+
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/af_guideline_h"
         android:layout_width="wrap_content"
@@ -116,6 +130,14 @@
                 android:textColor="@android:color/white"
                 android:textSize="14sp"
                 tools:text="Exp: 281223" />
+
+            <TextView
+                android:id="@+id/num_packs_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                tools:text="Packs in box: 10" />
         </LinearLayout>
 
         <TextView

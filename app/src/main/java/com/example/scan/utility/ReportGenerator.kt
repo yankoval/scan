@@ -21,7 +21,10 @@ object ReportGenerator {
         task: Task,
         allPackages: List<AggregatePackage>,
         aggregateFilter: String,
-        aggregatedFilter: String
+        aggregatedFilter: String,
+        operator: String = "",
+        model: String = "",
+        build: String = ""
     ): AggregationReport {
         val readyBoxes = allPackages.mapIndexed { index, pkg ->
             val filteredSscc = CodeFilter.symbologiesSymbolsFilter(pkg.sscc, aggregateFilter)
@@ -40,6 +43,9 @@ object ReportGenerator {
             id = task.id,
             startTime = task.startTime,
             endTime = formatInstant(System.currentTimeMillis()),
+            operator = operator,
+            model = model,
+            build = build,
             readyBox = readyBoxes
         )
     }

@@ -7,6 +7,9 @@ data class AggregationReport(
     val id: String,
     val startTime: String,
     val endTime: String,
+    val operator: String = "",
+    val model: String = "",
+    val build: String = "",
     val readyBox: List<ReadyBox>
 )
 

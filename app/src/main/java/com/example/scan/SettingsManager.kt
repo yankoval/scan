@@ -42,6 +42,10 @@ class SettingsManager(private val context: Context) {
         return sharedPreferences.getBoolean(KEY_SAVE_IMAGES, loadSettingsFromAssets().saveImages)
     }
 
+    fun isShowBuildInfoEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_SHOW_BUILD_INFO, loadSettingsFromAssets().showBuildInfo)
+    }
+
     private fun saveSettings(settings: Settings) {
         sharedPreferences.edit()
             .putString(KEY_SERVICE_URL, settings.serviceUrl)
@@ -50,6 +54,7 @@ class SettingsManager(private val context: Context) {
             .putString(KEY_AGGREGATED_CODE_FILTER_TEMPLATE, settings.aggregatedCodeFilterTemplate)
             .putLong(KEY_COOLING_PERIOD_MS, settings.coolingPeriodMs)
             .putBoolean(KEY_SAVE_IMAGES, settings.saveImages)
+            .putBoolean(KEY_SHOW_BUILD_INFO, settings.showBuildInfo)
             .apply()
     }
 
@@ -103,6 +108,7 @@ class SettingsManager(private val context: Context) {
         private const val KEY_AGGREGATED_CODE_FILTER_TEMPLATE = "aggregated_code_filter_template"
         private const val KEY_COOLING_PERIOD_MS = "cooling_period_ms"
         private const val KEY_SAVE_IMAGES = "save_images"
+        private const val KEY_SHOW_BUILD_INFO = "show_build_info"
         private const val TAG = "SettingsManager"
     }
 }
@@ -114,5 +120,6 @@ private data class Settings(
     val aggregateCodeFilterTemplate: String = "^]C1",
     val aggregatedCodeFilterTemplate: String = "^\\u001d",
     val coolingPeriodMs: Long = 500L,
-    val saveImages: Boolean = true
+    val saveImages: Boolean = true,
+    val showBuildInfo: Boolean = true
 )

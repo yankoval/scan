@@ -19,6 +19,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val githubRunNumber = System.getenv("GITHUB_RUN_NUMBER") ?: "0"
+        buildConfigField("String", "BUILD_NUMBER", "\"$githubRunNumber\"")
     }
 
     buildTypes {
@@ -39,6 +42,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
     packaging {
         resources.excludes.add("META-INF/DEPENDENCIES")
