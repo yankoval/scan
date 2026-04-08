@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonNames
 
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
 @Serializable
 data class Task(
     val id: String,
@@ -26,5 +27,7 @@ data class Task(
     val boxLabelFields: List<BoxLabelField>,
     val productNumbers: List<String>,
     val boxNumbers: List<String>,
-    val startTime: String = ""
+    val startTime: String = "",
+    @JsonNames("task-export-signed-link", "taskExportSignedLink")
+    val taskExportSignedLink: String? = null
 )
