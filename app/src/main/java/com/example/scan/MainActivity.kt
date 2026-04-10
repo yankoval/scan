@@ -14,6 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.os.Build
+import android.provider.Settings
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Size
@@ -109,6 +110,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
             updateCameraFocusMode()
         }
 
+        updateBuildInfoDisplay()
         handleIntent(intent)
     }
 
@@ -237,6 +239,7 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         // If the file was processed, update the UI. Otherwise, show an error and do nothing to the UI.
         if (isFileProcessed) {
             updateUiForTaskMode()
+            updateBuildInfoDisplay()
         } else {
             Log.e(TAG, "Failed to parse JSON content as Task or Settings")
             val errorMessage = if (taskParseError != null) "Invalid file format: $taskParseError" else "Invalid file format"
@@ -291,11 +294,23 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
                 viewBinding.gtinText.text = "GTIN: ${it.gtin ?: "N/A"}"
                 viewBinding.lotNoText.text = "Lot: ${it.lotNo ?: "N/A"}"
                 viewBinding.expDateText.text = "Exp: ${it.expDate ?: "N/A"}"
+                viewBinding.numPacksText.text = "numPacksInBox: ${it.numPacksInBox}"
             }
             updateAggregateCount()
             viewBinding.aggregateCountText.visibility = View.VISIBLE
         } else {
             viewBinding.aggregateCountText.visibility = View.GONE
+        }
+    }
+
+    private fun updateBuildInfoDisplay() {
+        if (settingsManager.isShowBuildInfoEnabled()) {
+            val buildNumber = BuildConfig.BUILD_NUMBER
+            val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
+            viewBinding.buildInfoText.text = "Build: $buildNumber | ID: $androidId"
+            viewBinding.buildInfoText.visibility = View.VISIBLE
+        } else {
+            viewBinding.buildInfoText.visibility = View.GONE
         }
     }
 
@@ -329,11 +344,18 @@ class MainActivity : AppCompatActivity(), BarcodeScannerProcessor.OnBarcodeScann
         val aggregateFilter = settingsManager.getAggregateCodeFilterTemplate()
         val aggregatedFilter = settingsManager.getAggregatedCodeFilterTemplate()
 
+        val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+        val model = Build.MODEL ?: ""
+        val buildNumber = BuildConfig.BUILD_NUMBER
+
         val report = ReportGenerator.generateAggregationReport(
             task,
             allPackages,
             aggregateFilter,
-            aggregatedFilter
+            aggregatedFilter,
+            operator = androidId,
+            model = model,
+            build = buildNumber
         )
 
         val jsonString = Json.encodeToString(report)

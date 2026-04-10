@@ -71,10 +71,16 @@ class ReportGeneratorTest {
             task,
             listOf(pkg),
             "^]C1",
-            "^\u001d"
+            "^\u001d",
+            operator = "test-id",
+            model = "test-model",
+            build = "123"
         )
 
         assertEquals(1, report.readyBox.size)
+        assertEquals("test-id", report.operator)
+        assertEquals("test-model", report.model)
+        assertEquals("123", report.build)
         assertEquals("SSCC123", report.readyBox[0].boxNumber)
         assertEquals(1, report.readyBox[0].productNumbersFull.size)
         assertEquals("CODE1", report.readyBox[0].productNumbersFull[0])
