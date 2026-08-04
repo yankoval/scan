@@ -24,9 +24,19 @@ android {
         buildConfigField("String", "BUILD_NUMBER", "\"$githubRunNumber\"")
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("release.keystore")
+            storePassword = "rustore_pass_123"
+            keyAlias = "releaseKey"
+            keyPassword = "rustore_pass_123"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
